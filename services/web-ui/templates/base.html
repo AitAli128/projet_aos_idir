@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MarketPharm Pro{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'shop/css/marketpharm.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <img src="{% static 'img/logo.png' %}" alt="MarketPharm" height="40">
+        <div>
+          <a href="{% url 'home' %}">MarketPharm <span>Pro</span></a>
+          <p class="tagline">Pharmacie &amp; parapharmacie pour professionnels</p>
+        </div>
+      </div>
+      <nav class="nav-actions">
+        <a href="{% url 'catalog' %}">Catalogue</a>
+        <a href="{% url 'cart' %}">Panier</a>
+        <a href="{% url 'orders' %}">Mes commandes</a>
+        {% if request.session.access %}
+          <a href="{% url 'logout' %}">Déconnexion</a>
+        {% else %}
+          <a class="btn-outline" href="{% url 'login' %}">Connexion</a>
+        {% endif %}
+      </nav>
+    </div>
+    <div class="promo-strip">
+      <span>Paiement professionnel</span>
+      <span>·</span>
+      <span>Livraison 24h</span>
+      <span>·</span>
+      <span>Remises volume automatiques</span>
+    </div>
+  </header>
+
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <p>
+      UI démonstration — API publique :
+      <a href="{{ PUBLIC_API_URL }}/api/products/" rel="noopener">{{ PUBLIC_API_URL }}/api/</a>
+      · Auth :
+      <a href="{{ PUBLIC_AUTH_URL }}/api/token/" rel="noopener">JWT</a>
+    </p>
+  </footer>
+</body>
+</html>

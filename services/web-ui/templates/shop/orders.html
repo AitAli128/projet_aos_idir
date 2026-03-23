@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Mes commandes{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Mes commandes</h1>
+{% if results %}
+  <div class="order-list">
+    {% for o in results %}
+      <article class="card order-card">
+        <header>
+          <span class="order-id">#{{ o.id }}</span>
+          <span class="status">{{ o.status }}</span>
+          <time>{{ o.created_at }}</time>
+        </header>
+        <p class="totals">
+          Sous-total {{ o.subtotal|default:0|floatformat:0 }}&nbsp;DA
+          {% if o.discount_percent %}
+            · Remise {{ o.discount_percent }}&nbsp;%
+          {% endif %}
+          · <strong>Total {{ o.total_dzd|floatformat:0 }}&nbsp;DA</strong>
+        </p>
+        <ul class="lines">
+          {% for line in o.lines %}
+            <li>{{ line.quantity }}× {{ line.product_name }} @ {{ line.unit_price_dzd|floatformat:0 }}&nbsp;DA</li>
+          {% endfor %}
+        </ul>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="muted">Aucune commande pour le moment.</p>
+{% endif %}
+{% endblock %}

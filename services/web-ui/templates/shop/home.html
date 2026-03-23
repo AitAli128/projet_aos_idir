@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Accueil — MarketPharm{% endblock %}
+
+{% block content %}
+<!-- Hero + Search -->
+<div class="search-hero">
+  <div style="text-align: center; margin-bottom: 1.2rem;">
+    <h1 style="font-size: 1.8rem; margin: 0 0 0.5rem;">MarketPharm</h1>
+    <p style="color: var(--muted); max-width: 580px; margin: 0 auto;">Fournisseur de confiance pour les professionnels de santé et les particuliers</p>
+  </div>
+  <div class="search-wrapper">
+    <input type="text" placeholder="Recherche un produit, une marque ... 🔍" aria-label="Rechercher">
+    <button><i class="fas fa-search"></i> Rechercher</button>
+  </div>
+  <div class="hero-cta" style="justify-content: center; margin-top: 1.2rem; gap: 1rem;">
+    {% if request.session.access %}
+      <a class="btn-primary small" href="{% url 'catalog' %}"><i class="fas fa-th-large"></i> Catalogue complet</a>
+    {% else %}
+      <a class="btn-primary small" href="{% url 'login' %}"><i class="fas fa-lock"></i> Espace pro</a>
+    {% endif %}
+    <a href="#" style="font-size: 0.85rem;">Devis B2B <i class="fas fa-arrow-right"></i></a>
+  </div>
+</div>
+
+<!-- Catégories principales -->
+<div>
+  <div class="section-title">
+    <span>Nos catégories</span>
+    <a href="{% url 'catalog' %}">Toutes les catégories <i class="fas fa-chevron-right"></i></a>
+  </div>
+  <div class="category-grid">
+    <div class="category-card">
+      <div class="category-icon"><i class="fas fa-vial"></i></div>
+      <h3>Autotests</h3>
+      <a href="#" class="voir-link">Voir les produits →</a>
+    </div>
+    <div class="category-card">
+      <div class="category-icon"><i class="fas fa-flask"></i></div>
+      <h3>Tests</h3>
+      <a href="#" class="voir-link">Voir les produits →</a>
+    </div>
+    <div class="category-card">
+      <div class="category-icon"><i class="fas fa-head-side-mask"></i></div>
+      <h3>Masques</h3>
+      <a href="#" class="voir-link">Voir les produits →</a>
+    </div>
+    <div class="category-card">
+      <div class="category-icon"><i class="fas fa-baby-carriage"></i></div>
+      <h3>Bébé</h3>
+      <a href="#" class="voir-link">Voir les produits →</a>
+    </div>
+    <div class="category-card">
+      <div class="category-icon"><i class="fas fa-hand-holding-medical"></i></div>
+      <h3>Gants</h3>
+      <a href="#" class="voir-link">Voir les produits →</a>
+    </div>
+    <div class="category-card">
+      <div class="category-icon"><i class="fas fa-boxes"></i></div>
+      <h3>Consommables</h3>
+      <a href="#" class="voir-link">Voir les produits →</a>
+    </div>
+  </div>
+</div>
+
+<!-- Panel horizontal rapide -->
+<div>
+  <div class="section-title">
+    <span>Pour vous : catégories rapides</span>
+    <a href="{% url 'catalog' %}">Voir le catalogue complet <i class="fas fa-chevron-right"></i></a>
+  </div>
+  <div class="horiz-scroll">
+    <div class="horiz-card"><img src="https://via.placeholder.com/120x80?text=Bébé" alt="Bébé"><strong>Bébé</strong></div>
+    <div class="horiz-card"><img src="https://via.placeholder.com/120x80?text=Médicaments" alt="Médicaments"><strong>Médicaments</strong></div>
+    <div class="horiz-card"><img src="https://via.placeholder.com/120x80?text=Rhume" alt="Rhume"><strong>Rhume / Grippe</strong></div>
+    <div class="horiz-card"><img src="https://via.placeholder.com/120x80?text=Allergie" alt="Allergie"><strong>Allergie</strong></div>
+    <div class="horiz-card"><img src="https://via.placeholder.com/120x80?text=Toux" alt="Toux"><strong>Toux / Gorge</strong></div>
+    <div class="horiz-card"><img src="https://via.placeholder.com/120x80?text=Digestion" alt="Digestion"><strong>Digestion</strong></div>
+    <div class="horiz-card"><img src="https://via.placeholder.com/120x80?text=Vitamines" alt="Vitamines"><strong>Vitamines</strong></div>
+  </div>
+</div>
+
+<!-- Produits phares -->
+<div>
+  <div class="section-title">
+    <span><i class="fas fa-star" style="color: var(--green);"></i> Produits phares</span>
+    <a href="{% url 'catalog' %}">Voir plus de produits <i class="fas fa-arrow-right"></i></a>
+  </div>
+  <div class="grid-products">
+    {% for product in featured_products %}
+      <div class="card product-card">
+        <div class="product-img-placeholder">
+          {% if product.image %}
+            <img src="{{ product.image.url }}" alt="{{ product.name }}" style="max-height: 100%; max-width: 100%; object-fit: cover;">
+          {% else %}
+            <i class="fas fa-capsules fa-3x"></i>
+          {% endif %}
+        </div>
+        <h2>{{ product.name }}</h2>
+        <p class="category">{{ product.category_name }}</p>
+        <div><span class="badge badge-stock"><i class="fas fa-check-circle"></i> En stock</span></div>
+        <form method="post" action="{% url 'cart_add' %}" class="product-buy-form">
+          {% csrf_token %}
+          <input type="hidden" name="product_id" value="{{ product.id }}">
+          <div class="price-row">
+            <span class="price">{{ product.price_dzd|floatformat:0 }} DA</span>
+            <label class="qty-label">Qté
+              <input class="product-qty" type="number" name="quantity" min="1" value="1" data-price="{{ product.price_dzd }}">
+            </label>
+            <span class="line-total">Total: {{ product.price_dzd|floatformat:0 }} DA</span>
+            <button type="submit" class="btn-outline-teal add-btn"><i class="fas fa-shopping-cart"></i> Ajouter</button>
+          </div>
+        </form>
+        <div class="muted" style="font-size: 0.7rem;">{{ product.unit_info|default:"" }}</div>
+      </div>
+    {% empty %}
+      <p>Aucun produit phare pour le moment.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Gamme tests (prix en DA) -->
+<div style="background: linear-gradient(120deg, var(--green-light) 0%, #fff 100%); border-radius: 28px; margin: 2.5rem 0; padding: 1.5rem 2rem;">
+  <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;">
+    <div>
+      <h3 style="font-size: 1.5rem; margin: 0 0 0.4rem;">🧪 Découvrez notre gamme de Tests</h3>
+      <p class="muted">Tests rapides antigéniques, PCR, strep A, autotests – livraison rapide et certifiée</p>
+    </div>
+    <a href="#" class="btn-primary">Voir tous nos tests <i class="fas fa-arrow-right"></i></a>
+  </div>
+  <div class="grid-products" style="margin-top: 1.5rem;">
+    <div class="card" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+      <i class="fas fa-vial" style="font-size: 2rem; color: var(--green);"></i>
+      <div><strong>Autotests COVID-19</strong><br><span class="muted">Résultats 15 min</span></div>
+      <div style="margin-left: auto;"><span class="price">1176 DA</span></div>
+    </div>
+    <div class="card" style="display: flex; align-items: center; gap: 1rem;">
+      <i class="fas fa-stethoscope" style="font-size: 2rem; color: var(--green);"></i>
+      <div><strong>Test Grippe A/B</strong><br><span class="muted">Écouvillon nasal</span></div>
+      <div style="margin-left: auto;"><span class="price">2136 DA</span></div>
+    </div>
+    <div class="card" style="display: flex; align-items: center; gap: 1rem;">
+      <i class="fas fa-droplet" style="font-size: 2rem; color: var(--green);"></i>
+      <div><strong>Strep A (angine)</strong><br><span class="muted">Usage pro / 25 tests</span></div>
+      <div style="margin-left: auto;"><span class="price">7800 DA</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Avantages -->
+<div class="feature-grid">
+  <div class="feature-item">
+    <i class="fas fa-truck-fast"></i>
+    <div><strong>Livraison 24h</strong><br><span class="muted">France métropolitaine</span></div>
+  </div>
+  <div class="feature-item">
+    <i class="fas fa-lock"></i>
+    <div><strong>Paiement sécurisé</strong><br><span class="muted">Visa, Mastercard, virement</span></div>
+  </div>
+  <div class="feature-item">
+    <i class="fas fa-certificate"></i>
+    <div><strong>Produits certifiés</strong><br><span class="muted">CE, ISO, dispositifs médicaux</span></div>
+  </div>
+  <div class="feature-item">
+    <i class="fas fa-headset"></i>
+    <div><strong>Support pro</strong><br><span class="muted">Devis et commandes B2B</span></div>
+  </div>
+</div>
+
+<div style="background: white; border-radius: 20px; border: 1px solid var(--border); padding: 0.8rem 1.2rem; text-align: center; margin: 1.5rem 0;">
+  <span class="muted"><i class="fas fa-check-circle" style="color: var(--green);"></i> Plus de 1200 professionnels de santé nous font confiance • Stock disponible • Expédition immédiate</span>
+</div>
+
+<script>
+  // Mise à jour dynamique du total pour les produits phares
+  document.querySelectorAll('.product-buy-form').forEach(form => {
+    const qtyInput = form.querySelector('.product-qty');
+    const totalSpan = form.querySelector('.line-total');
+    if (qtyInput && totalSpan) {
+      const update = () => {
+        const price = parseFloat(qtyInput.getAttribute('data-price')) || 0;
+        let qty = parseInt(qtyInput.value, 10);
+        if (isNaN(qty) || qty < 1) qty = 1;
+        qtyInput.value = qty;
+        const total = price * qty;
+        totalSpan.textContent = `Total: ${total.toFixed(0)} DA`;
+      };
+      qtyInput.addEventListener('input', update);
+      update();
+    }
+  });
+</script>
+{% endblock %}

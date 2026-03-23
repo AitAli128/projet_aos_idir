@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Catalogue{% endblock %}
+
+{% block extra_css %}
+<style>
+  .product-buy-form .price-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .qty-label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+  }
+  .product-qty {
+    width: 60px;
+    padding: 0.3rem;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .line-total {
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Nos produits</h1>
+<p class="muted">Tous nos médicaments et produits de santé – Prix en dinars algériens</p>
+<div class="grid-products">
+  {% for p in results %}
+    <article class="card product-card">
+      <!-- badge stock supprimé -->
+      <div class="product-img-placeholder">
+        {% if p.image %}
+          <img src="{{ p.image.url }}" alt="{{ p.name }}" style="max-height: 100%; max-width: 100%; object-fit: cover;">
+        {% else %}
+          <i class="fas fa-capsules fa-3x"></i>
+        {% endif %}
+      </div>
+      <h2>{{ p.name }}</h2>
+      <p class="category">{{ p.category_name }}</p>
+      <p class="summary">{{ p.summary }}</p>
+      <form method="post" action="{% url 'cart_add' %}" class="product-buy-form">
+        {% csrf_token %}
+        <input type="hidden" name="product_id" value="{{ p.id }}">
+        <div class="price-row">
+          <span class="price">{{ p.price_dzd|floatformat:0 }} DA</span>
+          <label class="qty-label">Qté
+            <input class="product-qty" type="number" name="quantity" min="1" value="1" data-price="{{ p.price_dzd }}">
+          </label>
+          <span class="line-total">Total: {{ p.price_dzd|floatformat:0 }} DA</span>
+          <button type="submit" class="btn-primary small"><i class="fas fa-shopping-cart"></i> Ajouter</button>
+        </div>
+      </form>
+    </article>
+  {% empty %}
+    <p>Aucun produit à afficher.</p>
+  {% endfor %}
+</div>
+
+<script>
+  document.querySelectorAll('.product-buy-form').forEach(form => {
+    const qtyInput = form.querySelector('.product-qty');
+    const totalSpan = form.querySelector('.line-total');
+    if (qtyInput && totalSpan) {
+      const update = () => {
+        const price = parseFloat(qtyInput.getAttribute('data-price')) || 0;
+        let qty = parseInt(qtyInput.value, 10);
+        if (isNaN(qty) || qty < 1) qty = 1;
+        qtyInput.value = qty;
+        const total = price * qty;
+        totalSpan.textContent = `Total: ${total.toFixed(0)} DA`;
+      };
+      qtyInput.addEventListener('input', update);
+      update();
+    }
+  });
+</script>
+{% endblock %}

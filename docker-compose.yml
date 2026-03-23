@@ -1,0 +1,154 @@
+# MarketPharm-style marketplace — microservices demo
+# Ajoutez à votre fichier hosts :
+# 127.0.0.1 web.localhost api.localhost auth.localhost
+
+services:
+  traefik:
+    image: traefik:v2.11
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - "8081:80"    
+      - "8082:8080"   
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - pharm
+
+  consul:
+    image: hashicorp/consul:1.17
+    command: agent -dev -client=0.0.0.0 -ui
+    ports:
+      - "8501:8500"   
+    networks:
+      - pharm
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "5673:5672"  
+      - "15673:15672"  
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    networks:
+      - pharm
+
+  postgres-auth:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+      POSTGRES_DB: auth_db
+    volumes:
+      - pg_auth:/var/lib/postgresql/data
+    networks:
+      - pharm
+
+  postgres-catalog:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: catalog
+      POSTGRES_DB: catalog_db
+    volumes:
+      - pg_catalog:/var/lib/postgresql/data
+    networks:
+      - pharm
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DATABASE_URL: postgres://auth:auth@postgres-auth:5432/auth_db
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-auth}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-shared-jwt-secret-change-in-prod}
+      CONSUL_HTTP_ADDR: http://consul:8500
+      SERVICE_NAME: auth-service
+      SERVICE_PORT: "8000"
+    depends_on:
+      - postgres-auth
+      - consul
+    networks:
+      - pharm
+    labels:
+      - traefik.enable=true
+      # Noms uniques (évite le conflit si un autre compose expose aussi "auth" / "web")
+      - traefik.http.routers.pharm-auth.rule=Host(`auth.localhost`) || Host(`auth.localhost:8081`)
+      - traefik.http.routers.pharm-auth.entrypoints=web
+      - traefik.http.services.pharm-auth.loadbalancer.server.port=8000
+
+  catalog-api:
+    build:
+      context: .
+      dockerfile: services/catalog-api/Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DATABASE_URL: postgres://catalog:catalog@postgres-catalog:5432/catalog_db
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_CATALOG:-change-me-catalog}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-shared-jwt-secret-change-in-prod}
+      AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      CONSUL_HTTP_ADDR: http://consul:8500
+      SERVICE_NAME: catalog-api
+      SERVICE_PORT: "8000"
+    depends_on:
+      - postgres-catalog
+      - rabbitmq
+      - consul
+    networks:
+      - pharm
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.catalog.rule=Host(`api.localhost`) || Host(`api.localhost:8081`)
+      - traefik.http.routers.catalog.entrypoints=web
+      - traefik.http.services.catalog.loadbalancer.server.port=8000
+
+  notification-worker:
+    build:
+      context: .
+      dockerfile: services/notification-worker/Dockerfile
+    environment:
+      AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
+    networks:
+      - pharm
+
+  web-ui:
+    build:
+      context: .
+      dockerfile: services/web-ui/Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_WEB:-change-me-web}
+      AUTH_INTERNAL_URL: http://auth-service:8000
+      API_INTERNAL_URL: http://catalog-api:8000
+      PUBLIC_AUTH_URL: http://auth.localhost:8081
+      PUBLIC_API_URL: http://api.localhost:8081
+      CONSUL_HTTP_ADDR: http://consul:8500
+      SERVICE_NAME: web-ui
+      SERVICE_PORT: "8000"
+    depends_on:
+      - auth-service
+      - catalog-api
+      - consul
+    networks:
+      - pharm
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.pharm-web.rule=Host(`web.localhost`) || Host(`web.localhost:8081`)
+      - traefik.http.routers.pharm-web.entrypoints=web
+      - traefik.http.services.pharm-web.loadbalancer.server.port=8000
+
+networks:
+  pharm:
+    driver: bridge
+
+volumes:
+  pg_auth:
+  pg_catalog:
