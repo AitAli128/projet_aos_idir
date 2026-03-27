@@ -3,91 +3,100 @@
 {% block title %}{% if product %}Modifier le Produit{% else %}Ajouter un Produit{% endif %}{% endblock %}
 
 {% block content %}
-<div style="max-width: 600px; margin: 0 auto; padding: 2rem;">
-  <h1 style="font-size: 2rem; margin-bottom: 2rem;">
-    {% if product %}✏️ Modifier le Produit{% else %}➕ Ajouter un Produit{% endif %}
-  </h1>
+<div class="main" style="max-width: 700px; margin: 0 auto;">
+  <div class="section-head" style="margin-top: 0;">
+    <h2>
+      {% if product %}<i class="fas fa-pen-to-square"></i> Modifier le Produit{% else %}<i class="fas fa-plus"></i> Ajouter un Produit{% endif %}
+    </h2>
+  </div>
 
   {% if messages %}
+    <ul class="messages">
     {% for message in messages %}
-      <div style="padding: 1rem; border-radius: 6px; margin-bottom: 1rem; background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;">
-        {{ message }}
-      </div>
+      <li class="{% if 'success' in message.tags %}success{% else %}error{% endif %}">
+        <i class="fas {% if 'success' in message.tags %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i> {{ message }}
+      </li>
     {% endfor %}
+    </ul>
   {% endif %}
 
-  <form method="post" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+  <form method="post" class="glass-card" style="border-top: 4px solid var(--primary); padding: 2rem;">
     {% csrf_token %}
     
     <div style="margin-bottom: 1.5rem;">
-      <label for="name" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Nom du produit *</label>
+      <label for="name" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Nom du produit <span style="color: var(--danger);">*</span></label>
       <input 
         type="text" 
         name="name" 
         id="name" 
         required 
         value="{{ product.name|default:'' }}"
-        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box;"
+        class="form-input"
         placeholder="Ex: Paracétamol 500mg"
       >
     </div>
     
     <div style="margin-bottom: 1.5rem;">
-      <label for="slug" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Slug (URL) *</label>
+      <label for="slug" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Slug (URL) <span style="color: var(--danger);">*</span></label>
       <input 
         type="text" 
         name="slug" 
         id="slug" 
         required 
         value="{{ product.slug|default:'' }}"
-        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box;"
+        class="form-input"
         placeholder="ex-paracetamol-500mg"
       >
-      <span style="font-size: 0.85rem; color: #666;">Utilisé dans l'URL du produit</span>
+      <span style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem; display: block;"><i class="fas fa-info-circle"></i> Utilisé dans l'URL du produit</span>
     </div>
     
     <div style="margin-bottom: 1.5rem;">
-      <label for="sku" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">SKU (Code) *</label>
+      <label for="sku" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">SKU (Code) <span style="color: var(--danger);">*</span></label>
       <input 
         type="text" 
         name="sku" 
         id="sku" 
         required 
         value="{{ product.sku|default:'' }}"
-        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box;"
+        class="form-input"
         placeholder="PARA-500-001"
       >
-      <span style="font-size: 0.85rem; color: #666;">Code unique pour l'inventaire</span>
+      <span style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem; display: block;"><i class="fas fa-info-circle"></i> Code unique pour l'inventaire</span>
     </div>
     
     <div style="margin-bottom: 1.5rem;">
-      <label for="summary" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Description courte</label>
+      <label for="summary" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Description courte</label>
       <textarea 
         name="summary" 
         id="summary" 
-        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box; resize: vertical; min-height: 80px;"
+        class="form-input"
+        style="resize: vertical; min-height: 100px;"
         placeholder="Description brève du produit..."
       >{{ product.summary|default:'' }}</textarea>
     </div>
     
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
       <div>
-        <label for="price" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Prix (DA) *</label>
-        <input 
-          type="number" 
-          name="price" 
-          id="price" 
-          required 
-          step="0.01" 
-          min="0"
-          value="{{ product.price|default:'' }}"
-          style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box;"
-          placeholder="10.99"
-        >
+        <label for="price" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Prix (DA) <span style="color: var(--danger);">*</span></label>
+        <div style="position: relative;">
+          <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-weight: 600;">DA</span>
+          <input 
+            type="number" 
+            name="price" 
+            id="price" 
+            required 
+            step="0.01" 
+            min="0"
+            value="{{ product.price|default:'' }}"
+            class="form-input"
+            style="padding-left: 3rem;"
+            placeholder="10.99"
+          >
+        </div>
       </div>
       
       <div>
-        <label for="stock" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Stock (Qté) *</label>
+        <label for="stock" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Stock (Qté) <span style="color: var(--danger);">*</span></label>
         <input 
           type="number" 
           name="stock" 
@@ -95,19 +104,19 @@
           required 
           min="0"
           value="{{ product.stock|default:'' }}"
-          style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box;"
+          class="form-input"
           placeholder="100"
         >
       </div>
     </div>
     
-    <div style="margin-bottom: 2rem;">
-      <label for="category" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Catégorie *</label>
+    <div style="margin-bottom: 2.5rem;">
+      <label for="category" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Catégorie <span style="color: var(--danger);">*</span></label>
       <select 
         name="category" 
         id="category" 
         required
-        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box;"
+        class="form-input"
       >
         <option value="">-- Sélectionner une catégorie --</option>
         {% for cat in categories %}
@@ -118,18 +127,12 @@
       </select>
     </div>
     
-    <div style="display: flex; gap: 1rem;">
-      <button 
-        type="submit" 
-        style="flex: 1; padding: 0.8rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 6px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.2s;"
-      >
-        {% if product %}💾 Mettre à jour{% else %}➕ Créer{% endif %}
+    <div style="display: flex; gap: 1rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
+      <button type="submit" class="btn btn-primary" style="flex: 1;">
+        {% if product %}<i class="fas fa-floppy-disk"></i> Mettre à jour{% else %}<i class="fas fa-plus"></i> Créer{% endif %}
       </button>
-      <a 
-        href="{% url 'admin_products_list' %}" 
-        style="flex: 1; padding: 0.8rem 1.5rem; background: #ddd; color: #333; border: none; border-radius: 6px; font-weight: 600; font-size: 1rem; text-decoration: none; text-align: center; transition: 0.2s;"
-      >
-        ❌ Annuler
+      <a href="{% url 'admin_products_list' %}" class="btn btn-outline" style="flex: 1; justify-content: center;">
+        <i class="fas fa-xmark"></i> Annuler
       </a>
     </div>
   </form>

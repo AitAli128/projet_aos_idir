@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Statistiques de Vente — Admin{% endblock %}
+
+{% block content %}
+<div class="section-head">
+    <h2><i class="fas fa-chart-line"></i> Statistiques du Marketplace</h2>
+</div>
+
+<div class="grid-cols-4" style="margin-bottom: 2rem;">
+    <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+        <span class="text-muted" style="display: block; margin-bottom: 0.5rem;">Commandes Totales</span>
+        <strong style="font-size: 2rem; color: var(--text-main);">{{ orders_count }}</strong>
+    </div>
+    <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+        <span class="text-muted" style="display: block; margin-bottom: 0.5rem;">Chiffre d'Affaires</span>
+        <strong style="font-size: 2rem; color: var(--primary);">{{ total_revenue|floatformat:2 }} DA</strong>
+    </div>
+    <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+        <span class="text-muted" style="display: block; margin-bottom: 0.5rem;">En Attente</span>
+        <strong style="font-size: 2rem; color: var(--warning);">{{ stats.PENDING }}</strong>
+    </div>
+    <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+        <span class="text-muted" style="display: block; margin-bottom: 0.5rem;">Livrées</span>
+        <strong style="font-size: 2rem; color: var(--success);">{{ stats.SHIPPED }}</strong>
+    </div>
+</div>
+
+<div class="glass-card" style="padding: 2rem;">
+    <h3 style="margin-bottom: 1.5rem;"><i class="fas fa-history"></i> Dernières Commandes</h3>
+    <table class="table" style="width: 100%; text-align: left; border-collapse: collapse;">
+        <thead>
+            <tr style="border-bottom: 2px solid var(--border);">
+                <th style="padding: 1rem 0;">Date</th>
+                <th style="padding: 1rem;">Numéro</th>
+                <th style="padding: 1rem;">Total</th>
+                <th style="padding: 1rem;">Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in recent_orders %}
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 1rem 0;">{{ o.created_at|date:"d M Y" }}</td>
+                <td style="padding: 1rem;">#{{ o.order_number|default:o.id }}</td>
+                <td style="padding: 1rem;">{{ o.total }} DA</td>
+                <td style="padding: 1rem;">
+                    <span class="badge {% if o.status == 'SHIPPED' or o.status == 'CONFIRMED' %}badge-ok{% elif o.status == 'PENDING' %}badge-low{% else %}badge-out{% endif %}">
+                        {{ o.status }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 2rem;">
+    <a href="{% url 'admin_dashboard' %}" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Retour au Dashboard</a>
+</div>
+{% endblock %}

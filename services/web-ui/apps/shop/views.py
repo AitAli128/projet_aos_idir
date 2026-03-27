@@ -57,16 +57,14 @@ def home(request):
     featured_products = []
     search_query = request.GET.get('q', '').strip()
     
-    if _token(request):
-        try:
-            
-            data = api_client.api_get("products/", _token(request))
-            if isinstance(data, dict) and "results" in data:
-                featured_products = data["results"][:8]  # Limiter à 8 produits
-            elif isinstance(data, list):
-                featured_products = data[:8]
-        except RequestException:
-            featured_products = []
+    try:
+        data = api_client.api_get("products/", _token(request))
+        if isinstance(data, dict) and "results" in data:
+            featured_products = data["results"][:8]  # Limiter à 8 produits
+        elif isinstance(data, list):
+            featured_products = data[:8]
+    except RequestException:
+        featured_products = []
     
     context = {
         "authenticated": bool(_token(request)),
@@ -166,10 +164,6 @@ def _require_auth(request):
 
 
 def catalog(request):
-    redir = _require_auth(request)
-    if redir:
-        return redir
-
     params = {}
     q = request.GET.get("q", "").strip()
     category = request.GET.get("category", "").strip()

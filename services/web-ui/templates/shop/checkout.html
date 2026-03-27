@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Finaliser la commande — MarketPharm{% endblock %}
+
+{% block content %}
+<div class="section-head">
+    <h2><i class="fas fa-shopping-cart"></i> Informations de livraison</h2>
+</div>
+
+<div style="max-width: 600px; margin: 0 auto;">
+    <form method="post" class="glass-card" style="padding: 2rem;">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 1.5rem;">
+            <label for="shipping_address" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">Adresse complète</label>
+            <textarea name="shipping_address" id="shipping_address" rows="3" class="glass-card" style="width: 100%; padding: 0.8rem; background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border);" required placeholder="Ex: 123 Rue de la Liberté"></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+                <label for="shipping_city" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">Ville</label>
+                <input type="text" name="shipping_city" id="shipping_city" class="glass-card" style="width: 100%; padding: 0.8rem; background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border);" required placeholder="Alger">
+            </div>
+            <div>
+                <label for="shipping_phone" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">Numéro de téléphone</label>
+                <input type="text" name="shipping_phone" id="shipping_phone" class="glass-card" style="width: 100%; padding: 0.8rem; background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border);" required placeholder="05XXXXXXXX">
+            </div>
+        </div>
+
+        <div style="background: var(--bg-hover); padding: 1rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h4 style="margin: 0 0 0.5rem 0;">Récapitulatif</h4>
+            <div style="display: flex; justify-content: space-between;">
+                <span>Total à payer</span>
+                <strong style="font-size: 1.2rem; color: var(--primary);">{{ cart_total }} DA</strong>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+            <i class="fas fa-check-circle"></i> Confirmer la commande
+        </button>
+    </form>
+</div>
+{% endblock %}

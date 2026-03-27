@@ -1,196 +1,142 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Accueil — MarketPharm{% endblock %}
+{% block title %}Accueil — {{ T.brand|default:'MarketPharm' }}{% endblock %}
 
 {% block content %}
 <!-- Hero + Search -->
-<div class="search-hero">
-  <div style="text-align: center; margin-bottom: 1.2rem;">
-    <h1 style="font-size: 1.8rem; margin: 0 0 0.5rem;">MarketPharm</h1>
-    <p style="color: var(--muted); max-width: 580px; margin: 0 auto;">Fournisseur de confiance pour les professionnels de santé et les particuliers</p>
-  </div>
-  <div class="search-wrapper">
-    <form method="get" style="display: flex; gap: 0.5rem; max-width: 500px; margin: 0 auto;">
-      <input type="text" name="q" value="{{ search_query }}" placeholder="Recherche un produit, une marque ... 🔍" aria-label="Rechercher" style="flex: 1; padding: 0.75rem 1rem; border: 2px solid #e1e5e9; border-radius: 25px; font-size: 1rem;">
-      <button type="submit" style="padding: 0.75rem 1.5rem; background: var(--green); color: white; border: none; border-radius: 25px; cursor: pointer;"><i class="fas fa-search"></i> Rechercher</button>
+<section class="search-hero">
+  <h2>L'excellence médicale à portée de main</h2>
+  <p>Fournisseur de confiance pour les professionnels de santé et les particuliers</p>
+
+  <div class="search-input-wrapper">
+    <form method="get" action="{% url 'catalog' %}" style="display: flex; width: 100%;">
+      <input type="text" name="q" value="{{ search_query }}" placeholder="Rechercher un produit, une référence..."
+        aria-label="Rechercher">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
     </form>
   </div>
-  <div class="hero-cta" style="justify-content: center; margin-top: 1.2rem; gap: 1rem;">
-    {% if request.session.access %}
-      <a class="btn-primary small" href="{% url 'catalog' %}"><i class="fas fa-th-large"></i> Catalogue complet</a>
-    {% else %}
-      <a class="btn-primary small" href="{% url 'login' %}"><i class="fas fa-lock"></i> Espace pro</a>
-    {% endif %}
-    <a href="#" style="font-size: 0.85rem;">Devis B2B <i class="fas fa-arrow-right"></i></a>
-  </div>
-</div>
 
-<!-- Catégories principales -->
-<div>
-  <div class="section-title">
-    <span>Nos catégories</span>
-    <a href="{% url 'catalog' %}">Toutes les catégories <i class="fas fa-chevron-right"></i></a>
+  <div style="display: flex; justify-content: center; margin-top: 2rem; gap: 1rem;">
+    <a class="btn btn-primary" href="{% url 'catalog' %}"><i class="fas fa-boxes-stacked"></i> Voir tous nos
+      produits</a>
+    {% if not request.session.access %}
+    <a class="btn btn-outline" href="{% url 'login' %}"><i class="fas fa-user-doctor"></i> Espace professionnel</a>
+    {% endif %}
   </div>
-  <div class="category-grid">
-    <div class="category-card">
-      <div class="category-icon"><i class="fas fa-vial"></i></div>
-      <h3>Autotests</h3>
-      <a href="#" class="voir-link">Voir les produits →</a>
-    </div>
-    <div class="category-card">
-      <div class="category-icon"><i class="fas fa-flask"></i></div>
-      <h3>Tests</h3>
-      <a href="#" class="voir-link">Voir les produits →</a>
-    </div>
-    <div class="category-card">
-      <div class="category-icon"><i class="fas fa-head-side-mask"></i></div>
-      <h3>Masques</h3>
-      <a href="#" class="voir-link">Voir les produits →</a>
-    </div>
-    <div class="category-card">
-      <div class="category-icon"><i class="fas fa-baby-carriage"></i></div>
-      <h3>Bébé</h3>
-      <a href="#" class="voir-link">Voir les produits →</a>
-    </div>
-    <div class="category-card">
-      <div class="category-icon"><i class="fas fa-hand-holding-medical"></i></div>
-      <h3>Gants</h3>
-      <a href="#" class="voir-link">Voir les produits →</a>
-    </div>
-    <div class="category-card">
-      <div class="category-icon"><i class="fas fa-boxes"></i></div>
-      <h3>Consommables</h3>
-      <a href="#" class="voir-link">Voir les produits →</a>
-    </div>
-  </div>
-</div>
+</section>
 
 <!-- Produits phares -->
-<div>
-  <div class="section-title">
-    <span><i class="fas fa-star" style="color: var(--green);"></i> Produits phares</span>
-    <a href="{% url 'catalog' %}">Voir plus de produits <i class="fas fa-arrow-right"></i></a>
+<section>
+  <div class="section-head" style="margin-top: 0;">
+    <h2><i class="fas fa-star" style="color: var(--warning);"></i> Produits Recommandés</h2>
+    <a href="{% url 'catalog' %}">Voir tout le catalogue <i class="fas fa-arrow-right"></i></a>
   </div>
-  <div class="grid-products">
+
+  <div class="grid-cols-4">
     {% for product in featured_products %}
-      <div class="card product-card">
-        <div class="product-img-placeholder">
-          {% if product.image %}
-            <img src="{{ product.image.url }}" alt="{{ product.name }}" style="max-height: 100%; max-width: 100%; object-fit: cover;">
-          {% else %}
-            <i class="fas fa-capsules fa-3x"></i>
-          {% endif %}
-        </div>
-        <h2>{{ product.name }}</h2>
-        <p class="category">{{ product.category_name }}</p>
-        <div><span class="badge badge-stock"><i class="fas fa-check-circle"></i> En stock</span></div>
-        <div class="price-row">
-          <span class="price">{{ product.price }}&nbsp;DA</span>
-          <a href="{% url 'cart_add' product.id %}" class="btn-outline-teal"><i class="fas fa-shopping-cart"></i> Ajouter</a>
-        </div>
-        <div class="muted" style="font-size: 0.7rem;">{{ product.unit_info|default:"" }}</div>
+    <article class="glass-card product-card">
+      <div class="product-img">
+        {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}">
+        {% else %}
+        <i class="fas fa-pills"></i>
+        {% endif %}
       </div>
+
+      <h3>{{ product.name }}</h3>
+      <span class="product-cat">{{ product.category_name }}</span>
+
+      <div style="margin-bottom: auto;">
+        <span class="badge badge-ok"><i class="fas fa-check-circle"></i> En stock</span>
+        <p class="text-muted" style="font-size: 0.85rem;">{{ product.unit_info|default:"À l'unité" }}</p>
+      </div>
+
+      <div class="product-price-row">
+        <span class="price">{{ product.price }} DA</span>
+        {% if request.session.access %}
+        <a href="{% url 'cart_add' product.id %}" class="btn btn-primary"
+          style="padding: 0.4rem 0.8rem; font-size: 0.9rem;"><i class="fas fa-cart-plus"></i> Ajouter</a>
+        {% else %}
+        <a href="{% url 'login' %}?next={% url 'home' %}" class="btn btn-outline" title="Connectez-vous pour commander"
+          style="padding: 0.4rem 0.8rem; font-size: 0.85rem;"><i class="fas fa-lock"></i> S'identifier</a>
+        {% endif %}
+      </div>
+    </article>
     {% empty %}
-      <!-- Exemples statiques si aucune donnée -->
-      <div class="card product-card">
-        <div class="product-img-placeholder"><i class="fas fa-frog fa-3x"></i></div>
-        <h2>Seringue Grenouille</h2>
-        <p class="category">Bébé / Seringue nasale</p>
-        <div><span class="badge badge-stock"><i class="fas fa-check-circle"></i> En stock</span></div>
-        <div class="price-row">
-          <span class="price">1,45 €</span>
-          <a href="#" class="btn-outline-teal"><i class="fas fa-shopping-cart"></i> Ajouter</a>
-        </div>
-        <div class="muted" style="font-size: 0.7rem;">Boîte de 2 seringues</div>
-      </div>
-      <div class="card product-card">
-        <div class="product-img-placeholder"><i class="fas fa-wine-bottle fa-3x"></i></div>
-        <h2>Pack découverte</h2>
-        <p class="category">Consommables / Bouteilles</p>
-        <div><span class="badge badge-stock"><i class="fas fa-check-circle"></i> En stock</span></div>
-        <div class="price-row">
-          <span class="price">109,50 €</span>
-          <a href="#" class="btn-outline-teal"><i class="fas fa-shopping-cart"></i> Ajouter</a>
-        </div>
-        <div class="muted" style="font-size: 0.7rem;">24 bouteilles 500 ml</div>
-      </div>
+    <p class="text-muted" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">Aucun produit phare
+      disponible.</p>
     {% endfor %}
   </div>
-</div>
+</section>
 
-<!-- Gamme tests -->
-<div style="background: linear-gradient(120deg, var(--green-light) 0%, #fff 100%); border-radius: 28px; margin: 2.5rem 0; padding: 1.5rem 2rem;">
-  <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;">
-    <div>
-      <h3 style="font-size: 1.5rem; margin: 0 0 0.4rem;">🧪 Découvrez notre gamme de Tests</h3>
-      <p class="muted">Tests rapides antigéniques, PCR, strep A, autotests – livraison rapide et certifiée</p>
-    </div>
-    <a href="#" class="btn-primary">Voir tous nos tests <i class="fas fa-arrow-right"></i></a>
+<!-- Catégories Bento Grid -->
+<section style="margin-top: 4rem;">
+  <div class="bento-grid">
+    <a href="{% url 'catalog' %}?category=" class="bento-card bento-tests">
+      <h3>Tests</h3>
+      <p>Voir les produits <span>›</span></p>
+      <img src="{% static 'shop/img/tests.png' %}" alt="Tests rapides" class="bento-img">
+    </a>
+
+    <a href="{% url 'catalog' %}?category=" class="bento-card bento-masques">
+      <h3>Masques</h3>
+      <p>Voir les produits <span>›</span></p>
+      <img src="{% static 'shop/img/masks.png' %}" alt="Masques" class="bento-img">
+    </a>
+
+    <a href="{% url 'catalog' %}?category=" class="bento-card bento-gants">
+      <h3>Gants</h3>
+      <p>Voir les produits <span>›</span></p>
+      <img src="{% static 'shop/img/gloves.png' %}" alt="Gants" class="bento-img">
+    </a>
+
+    <a href="{% url 'catalog' %}?category=" class="bento-card bento-consommables">
+      <h3>Consommables</h3>
+      <p>Voir les produits <span>›</span></p>
+      <img src="{% static 'shop/img/cons.png' %}" alt="Consommables" class="bento-img">
+    </a>
+
+    <a href="{% url 'catalog' %}?category=" class="bento-card bento-bebe">
+      <h3>Bébé</h3>
+      <p>Voir les produits <span>›</span></p>
+      <img src="{% static 'shop/img/bebe.png' %}" alt="Bébé" class="bento-img">
+    </a>
   </div>
 
-  <div class="grid-products" style="margin-top: 1.5rem;">
-    
-    <!-- Produit 1 -->
-    <div class="card" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-      <i class="fas fa-vial" style="font-size: 2rem; color: var(--green);"></i>
-      <div>
-        <strong>Autotests COVID-19</strong><br>
-        <span class="muted">Résultats 15 min</span>
-      </div>
-      <div style="margin-left: auto;">
-        <span class="price">1200 DA</span>
-      </div>
-    </div>
-
-    <!-- Produit 2 -->
-    <div class="card" style="display: flex; align-items: center; gap: 1rem;">
-      <i class="fas fa-stethoscope" style="font-size: 2rem; color: var(--green);"></i>
-      <div>
-        <strong>Test Grippe A/B</strong><br>
-        <span class="muted">Écouvillon nasal</span>
-      </div>
-      <div style="margin-left: auto;">
-        <span class="price">1350 DA</span>
-      </div>
-    </div>
-
-    <!-- Produit 3 -->
-    <div class="card" style="display: flex; align-items: center; gap: 1rem;">
-      <i class="fas fa-droplet" style="font-size: 2rem; color: var(--green);"></i>
-      <div>
-        <strong>Strep A (angine)</strong><br>
-        <span class="muted">Usage pro / 25 tests</span>
-      </div>
-      <div style="margin-left: auto;">
-        <span class="price">4900 DA</span>
-      </div>
-    </div>
-
+  <div style="text-align: center; margin: 3rem 0;">
+    <a href="{% url 'catalog' %}" class="btn btn-outline"
+      style="padding: 0.8rem 2.5rem; border-radius: 50px; font-weight: 600;">Voir plus de produits</a>
   </div>
-</div>
+</section>
 
 <!-- Avantages -->
-<div class="feature-grid">
-  <div class="feature-item">
-    <i class="fas fa-truck-fast"></i>
-    <div><strong>Livraison 24h</strong><br><span class="muted">France métropolitaine</span></div>
+<section style="margin-top: 5rem;">
+  <div class="grid-cols-4" style="gap: 1.5rem;">
+    <div class="glass-card"
+      style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem;">
+      <i class="fas fa-truck-fast" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+      <h3 style="margin: 0 0 0.5rem;">Livraison 24h</h3>
+      <p class="text-muted" style="font-size: 0.9rem; margin: 0;">Expédition immédiate pour les pros</p>
+    </div>
+    <div class="glass-card"
+      style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem;">
+      <i class="fas fa-shield-halved" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+      <h3 style="margin: 0 0 0.5rem;">Paiement sécurisé</h3>
+      <p class="text-muted" style="font-size: 0.9rem; margin: 0;">Multiples méthodes de paiement</p>
+    </div>
+    <div class="glass-card"
+      style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem;">
+      <i class="fas fa-certificate" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+      <h3 style="margin: 0 0 0.5rem;">Qualité certifiée</h3>
+      <p class="text-muted" style="font-size: 0.9rem; margin: 0;">Produits CE et norme ISO</p>
+    </div>
+    <div class="glass-card"
+      style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem;">
+      <i class="fas fa-headset" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+      <h3 style="margin: 0 0 0.5rem;">Support pro B2B</h3>
+      <p class="text-muted" style="font-size: 0.9rem; margin: 0;">Assistance prioritaire 7j/7</p>
+    </div>
   </div>
-  <div class="feature-item">
-    <i class="fas fa-lock"></i>
-    <div><strong>Paiement sécurisé</strong><br><span class="muted">Visa, Mastercard, virement</span></div>
-  </div>
-  <div class="feature-item">
-    <i class="fas fa-certificate"></i>
-    <div><strong>Produits certifiés</strong><br><span class="muted">CE, ISO, dispositifs médicaux</span></div>
-  </div>
-  <div class="feature-item">
-    <i class="fas fa-headset"></i>
-    <div><strong>Support pro</strong><br><span class="muted">Devis et commandes B2B</span></div>
-  </div>
-</div>
-
-<div style="background: white; border-radius: 20px; border: 1px solid var(--border); padding: 0.8rem 1.2rem; text-align: center; margin: 1.5rem 0;">
-  <span class="muted"><i class="fas fa-check-circle" style="color: var(--green);"></i> Plus de 1200 professionnels de santé nous font confiance • Stock disponible • Expédition immédiate</span>
-</div>
+</section>
 {% endblock %}
