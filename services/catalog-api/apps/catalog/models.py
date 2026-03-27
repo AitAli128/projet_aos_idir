@@ -39,11 +39,11 @@ class Product(models.Model):
     
     def get_average_rating(self):
         """Calculer la moyenne des notes"""
-        from .models import ProductRating
-        ratings = ProductRating.objects.filter(product=self)
+        ratings = self.ratings.all()
         if ratings.exists():
-            return sum(r.rating for r in ratings) / len(ratings)
-        return 0
+            total = sum(r.rating for r in ratings)
+            return round(total / ratings.count(), 1)
+        return 0.0
 
 
 class Patient(models.Model):
@@ -107,31 +107,45 @@ class OrderLine(models.Model):
 
 class ProductRating(models.Model):
     """Simple rating system - user can rate product once and delete rating"""
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    rating = models.IntegerField(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')])
-    comment = models.TextField(blank=True)
+    auth_user_id = models.PositiveIntegerField(db_index=True)
+    product = models.ForeignKey(Product, related_name="ratings", on_delete=models.CASCADE)
+    score = models.PositiveSmallIntegerField(choices=[(i, f"{i}⭐") for i in range(1, 6)])
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['user', 'product'], name='unique_user_product_rating')
+            models.UniqueConstraint(fields=['auth_user_id', 'product'], name='unique_user_product_rating')
         ]
     
     def __str__(self):
-        return f"{self.user.username} - {self.product.name} - {self.rating}/5"
+        return f"User {self.auth_user_id} - {self.product.name} - {self.score}/5"
 
 
 class ProductRecommendation(models.Model):
     """Product recommendation system - user can recommend once"""
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    auth_user_id = models.PositiveIntegerField(db_index=True)
+    product = models.ForeignKey(Product, related_name="recommendations", on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['user', 'product'], name='unique_user_product_recommendation')
+            models.UniqueConstraint(fields=['auth_user_id', 'product'], name='unique_user_product_recommendation')
         ]
     
     def __str__(self):
-        return f"{self.user.username} recommends {self.product.name}"
+        return f"User {self.auth_user_id} recommends {self.product.name}"
+
+
+class ProductLike(models.Model):
+    """Product like system - user can like once"""
+    auth_user_id = models.PositiveIntegerField(db_index=True)
+    product = models.ForeignKey(Product, related_name="likes", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['auth_user_id', 'product'], name='unique_user_product_like')
+        ]
+    
+    def __str__(self):
+        return f"User {self.auth_user_id} likes {self.product.name}"
