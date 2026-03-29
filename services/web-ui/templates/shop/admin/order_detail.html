@@ -26,13 +26,13 @@
       <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-muted);">
         <p style="margin: 0;"><strong>Client ID:</strong> <span style="font-family: monospace; color: var(--text-main);">{{ order.auth_user_id }}</span></p>
         <p style="margin: 0;"><strong>Date:</strong> {{ order.created_at|date:"d/m/Y à H:i" }}</p>
-        <p style="margin: 0;"><strong>Sous-total:</strong> {{ order.subtotal|floatformat:2 }} DA</p>
+        <p style="margin: 0;"><strong>Sous-total:</strong> {{ order.subtotal|floatformat:2 }} {{ CURRENCY_SYMBOL }}</p>
         {% if order.discount_percent %}
           <p style="margin: 0;"><strong>Remise:</strong> <span class="badge badge-low" style="margin-bottom: 0;">-{{ order.discount_percent }}%</span></p>
         {% endif %}
       </div>
       <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--card-border);">
-        <p style="font-size: 1.4rem; color: var(--primary); margin: 0;"><strong>TOTAL: {{ order.total|floatformat:2 }} DA</strong></p>
+        <p style="font-size: 1.4rem; color: var(--primary); margin: 0;"><strong>TOTAL: {{ order.total|floatformat:2 }} {{ CURRENCY_SYMBOL }}</strong></p>
       </div>
     </div>
 
@@ -85,9 +85,9 @@
               <span style="font-size: 0.85rem; color: var(--text-muted); font-family: monospace;">ID: {{ line.product }}</span>
             </td>
             <td style="padding: 1.2rem 1.5rem; text-align: center; font-weight: 700; font-size: 1.1rem;">{{ line.quantity }}</td>
-            <td style="padding: 1.2rem 1.5rem; text-align: right; color: var(--text-muted);">{{ line.unit_price|floatformat:2 }} DA</td>
+            <td style="padding: 1.2rem 1.5rem; text-align: right; color: var(--text-muted);">{{ line.unit_price|floatformat:2 }} {{ CURRENCY_SYMBOL }}</td>
             <td style="padding: 1.2rem 1.5rem; text-align: right; font-weight: 700; color: var(--primary);">
-              {{ line.line_total|floatformat:2 }} DA
+              {{ line.line_total|floatformat:2 }} {{ CURRENCY_SYMBOL }}
             </td>
           </tr>
           {% endfor %}

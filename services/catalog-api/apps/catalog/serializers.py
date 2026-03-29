@@ -23,6 +23,7 @@ class ProductSerializer(serializers.ModelSerializer):
     user_rating = serializers.SerializerMethodField()
     is_recommended_by_user = serializers.SerializerMethodField()
     user_recommendations = serializers.SerializerMethodField()
+    image = serializers.URLField(source='image_url', required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Product
@@ -44,7 +45,10 @@ class ProductSerializer(serializers.ModelSerializer):
             "user_rating",
             "is_recommended_by_user",
             "user_recommendations",
+            "auth_user_id",
+            "image",
         )
+        read_only_fields = ("id", "auth_user_id")
     
     def get_is_liked_by_user(self, obj):
         request = self.context.get('request')

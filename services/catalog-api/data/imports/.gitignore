@@ -1,0 +1,5 @@
+# CSV volumineux (Kaggle, exports) : ne pas versionner par défaut
+*
+!.gitignore
+# Jeu Kaggle Égypte (EGP) versionné pour démo / import reproductible
+!drugs_egypt.csv

@@ -30,7 +30,7 @@
               {% for line in o.lines %}
                 <li style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border); padding-bottom: 0.5rem;">
                   <span><strong>{{ line.quantity }}×</strong> {{ line.product_name }}</span>
-                  <span class="text-muted">{{ line.unit_price }}&nbsp;DA</span>
+                  <span class="text-muted">{{ line.unit_price }}&nbsp;{{ CURRENCY_SYMBOL }}</span>
                 </li>
               {% endfor %}
             </ul>
@@ -40,7 +40,7 @@
             <div>
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                 <span class="text-muted">Sous-total</span>
-                <span>{{ o.subtotal }}&nbsp;DA</span>
+                <span>{{ o.subtotal }}&nbsp;{{ CURRENCY_SYMBOL }}</span>
               </div>
               {% if o.discount_percent %}
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: var(--success);">
@@ -52,7 +52,7 @@
             
             <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.5rem;">
               <strong style="font-size: 1.1rem;">Total</strong>
-              <strong style="font-size: 1.3rem; color: var(--text-main);">{{ o.total }}&nbsp;DA</strong>
+              <strong style="font-size: 1.3rem; color: var(--text-main);">{{ o.total }}&nbsp;{{ CURRENCY_SYMBOL }}</strong>
             </div>
           </div>
         </div>

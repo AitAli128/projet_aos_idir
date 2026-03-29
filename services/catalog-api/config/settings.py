@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 from pathlib import Path
 
 import environ
@@ -87,3 +88,7 @@ REST_FRAMEWORK = {
 }
 
 AMQP_URL = env("AMQP_URL", default="amqp://guest:guest@rabbitmq:5672/")
+
+# Import Kaggle Égypte : combien de dinars algériens (DZD) pour 1 livre égyptienne (EGP).
+# À ajuster selon le cours du jour (ex. banque centrale / XE). Valeur indicative seulement.
+EGP_TO_DZD_RATE = Decimal(str(env("EGP_TO_DZD_RATE", default="2.70")))

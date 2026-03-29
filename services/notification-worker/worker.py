@@ -3,6 +3,9 @@ import logging
 import os
 import sys
 import time
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 import pika
 
@@ -13,6 +16,32 @@ AMQP_URL = os.environ.get("AMQP_URL", "amqp://guest:guest@rabbitmq:5672/")
 EXCHANGE = "marketpharm"
 QUEUE = "notifications"
 ROUTING_KEY = "order.created"
+
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASS = os.environ.get("SMTP_PASS", "")
+
+def send_email(to_address, subject, html_content):
+    if not SMTP_USER or not SMTP_PASS:
+        logger.error("Détails SMTP manquants. L'e-mail ne peut pas être envoyé.")
+        return False
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = to_address
+        msg['Subject'] = subject
+
+        msg.attach(MIMEText(html_content, 'html'))
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi de l'e-mail : {e}")
+        return False
 
 
 def main():
@@ -34,7 +63,28 @@ def main():
                     payload = {"raw": body.decode("utf-8", errors="replace")}
                 
                 if method.routing_key == "order.created":
-                    logger.info("Notification commande — simulation envoi e-mail : %s", payload)
+                    logger.info("Notification commande reçue : %s", payload)
+                    order_id = payload.get("order_id")
+                    email = payload.get("email")
+                    if email:
+                        logger.info(f"Envoi de l'e-mail de confirmation à {email}...")
+                        html_content = f"""
+                        <html>
+                          <body>
+                            <h2 style="color: #10b981;">Confirmation de votre commande!</h2>
+                            <p>Bonjour,</p>
+                            <p>Votre commande <strong>#{order_id}</strong> a été enregistrée avec succès sur MarketPharm.</p>
+                            <p>Nous vous remercions pour votre confiance et nous préparons votre expédition.</p>
+                            <br/>
+                            <p>L'équipe MarketPharm</p>
+                          </body>
+                        </html>
+                        """
+                        success = send_email(email, f"Votre commande #{order_id} - MarketPharm", html_content)
+                        if success:
+                            logger.info(f"E-mail envoyé avec succès à {email}")
+                    else:
+                        logger.warning("Aucun e-mail fourni dans la commande, pas d'e-mail envoyé.")
                 elif method.routing_key == "stock.empty":
                     logger.warning("ALERTE STOCK — Produit '%s' (ID:%s) est en rupture !", 
                                    payload.get("product_name"), payload.get("product_id"))

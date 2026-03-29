@@ -41,7 +41,7 @@
                 </form>
               </td>
               <td style="padding: 1rem; text-align: right; font-weight: 600; font-size: 1.1rem;">
-                {{ row.line_total|floatformat:2 }}&nbsp;DA
+                {{ row.line_total|floatformat:2 }}&nbsp;{{ CURRENCY_SYMBOL }}
               </td>
               <td style="padding: 1rem; text-align: center;">
                 <a href="{% url 'cart_remove' row.product.id %}" class="btn" style="color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 0.4rem 0.8rem; border-radius: 8px;" title="Retirer"><i class="fas fa-trash-alt"></i></a>
@@ -82,7 +82,7 @@
       </div>
 
       <div style="display: flex; flex-direction: column; align-items: flex-end;">
-        <h3 style="font-size: 1.5rem; margin: 0 0 0.5rem;">Total estimé : <span style="font-size: 2rem; color: var(--text-main);">{{ cart_total|floatformat:2 }}&nbsp;DA</span></h3>
+        <h3 style="font-size: 1.5rem; margin: 0 0 0.5rem;">Total estimé : <span style="font-size: 2rem; color: var(--text-main);">{{ cart_total|floatformat:2 }}&nbsp;{{ CURRENCY_SYMBOL }}</span></h3>
         <p class="text-muted" style="margin-bottom: 2rem;"><i class="fas fa-info-circle"></i> Les remises volume (jusqu’à −5&nbsp;%) sont calculées par l'API lors de la validation.</p>
         
         <div style="display: flex; gap: 1rem; width: 100%; justify-content: flex-end;">

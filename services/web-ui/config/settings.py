@@ -73,3 +73,8 @@ AUTH_INTERNAL_URL = env("AUTH_INTERNAL_URL", default="http://auth-service:8000")
 API_INTERNAL_URL = env("API_INTERNAL_URL", default="http://catalog-api:8000")
 PUBLIC_AUTH_URL = env("PUBLIC_AUTH_URL", default="http://auth.localhost")
 PUBLIC_API_URL = env("PUBLIC_API_URL", default="http://api.localhost")
+
+# Devise affichée dans l’UI (les montants stockés en base sont dans cette unité, sans conversion automatique)
+# Exemples : Algérie DZD → DA ou DZD | Égypte EGP → ج.م ou E£ ou EGP
+CURRENCY_CODE = env("CURRENCY_CODE", default="DZD")
+CURRENCY_SYMBOL = env("CURRENCY_SYMBOL", default="DA")

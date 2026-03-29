@@ -38,7 +38,7 @@
                 <td style="padding: 1.2rem 1.5rem; font-weight: 700;">#{{ order.id }}</td>
                 <td style="padding: 1.2rem 1.5rem; color: var(--text-muted); font-family: monospace;">{{ order.auth_user_id }}</td>
                 <td style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--primary);">
-                  {{ order.total|floatformat:2 }} DA
+                  {{ order.total|floatformat:2 }} {{ CURRENCY_SYMBOL }}
                   {% if order.discount_percent %}
                     <span class="badge badge-low" style="margin-left: 0.5rem; margin-bottom: 0;">-{{ order.discount_percent }}%</span>
                   {% endif %}

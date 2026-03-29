@@ -93,6 +93,7 @@ services:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_CATALOG:-change-me-catalog}
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-shared-jwt-secret-change-in-prod}
       AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      EGP_TO_DZD_RATE: ${EGP_TO_DZD_RATE:-2.70}
       CONSUL_HTTP_ADDR: http://consul:8500
       SERVICE_NAME: catalog-api
       SERVICE_PORT: "8000"
@@ -101,7 +102,7 @@ services:
       - rabbitmq
       - consul
     volumes:
-      - C:\Users\hiche\pharm\services\catalog-api:/app
+      - ./services/catalog-api:/app
     networks:
       - pharm
     labels:
@@ -116,6 +117,10 @@ services:
       dockerfile: services/notification-worker/Dockerfile
     environment:
       AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672/
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
     depends_on:
       - rabbitmq
     networks:
@@ -132,6 +137,8 @@ services:
       API_INTERNAL_URL: http://catalog-api:8000
       PUBLIC_AUTH_URL: http://auth.localhost:8081
       PUBLIC_API_URL: http://api.localhost:8081
+      CURRENCY_CODE: ${CURRENCY_CODE:-DZD}
+      CURRENCY_SYMBOL: ${CURRENCY_SYMBOL:-DA}
       CONSUL_HTTP_ADDR: http://consul:8500
       SERVICE_NAME: web-ui
       SERVICE_PORT: "8000"

@@ -2,7 +2,7 @@ import base64
 import json
 from django.conf import settings
 
-from .views import _is_admin
+from .views import _is_admin, _get_role
 
 def public_endpoints(request):
     lang = request.session.get("lang", "fr")
@@ -47,6 +47,7 @@ def public_endpoints(request):
     user_id_display = "N/A"
     user_initials = "P"
     user_is_admin_flag = _is_admin(request)
+    user_role_val = _get_role(request)
     
     token = request.session.get("access")
     if token:
@@ -88,10 +89,13 @@ def public_endpoints(request):
     return {
         "PUBLIC_AUTH_URL": settings.PUBLIC_AUTH_URL,
         "PUBLIC_API_URL": settings.PUBLIC_API_URL,
+        "CURRENCY_CODE": getattr(settings, "CURRENCY_CODE", "DZD"),
+        "CURRENCY_SYMBOL": getattr(settings, "CURRENCY_SYMBOL", "DA"),
         "LANG": lang,
         "DIR": "rtl" if lang == "ar" else "ltr",
         "T": active_text,
         "user_is_admin": user_is_admin_flag,
+        "user_role": user_role_val,
         "user_name": user_name,
         "user_id_display": user_id_display,
         "user_initials": user_initials,

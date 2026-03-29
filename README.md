@@ -21,7 +21,7 @@ Projet de démonstration : UI proche d’une marketplace B2B type [MarketPharm](
 ## Prérequis
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Linux containers)
-- Ajouter dans `C:\Windows\System32\drivers\etc\hosts` :
+- Ajouter dans le fichier hosts du système (`/etc/hosts` sur macOS/Linux, `C:\Windows\System32\drivers\etc\hosts` sur Windows) :
 
 ```text
 127.0.0.1 web.localhost api.localhost auth.localhost
@@ -30,8 +30,8 @@ Projet de démonstration : UI proche d’une marketplace B2B type [MarketPharm](
 ## Démarrage
 
 ```bash
-cd c:\Users\hiche\pharm
-copy .env.example .env
+cd /chemin/vers/pharm
+cp .env.example .env   # sous Windows : copy .env.example .env
 docker compose up --build
 ```
 
@@ -58,6 +58,58 @@ Créés au démarrage du service `auth-service` :
 | `pro@demo.local` | `demodemo123` | Professionnel |
 | `admin@demo.local` | `adminadmin123` | Admin catalogue (JWT) |
 
+## Importer des médicaments / produits depuis un CSV (ex. Kaggle)
+
+1. Créer les catégories de base : `docker compose exec catalog-api python manage.py seed_demo` (ou en local depuis `services/catalog-api`).
+2. Placer ton fichier dans `services/catalog-api/data/imports/` (dossier ignoré par Git pour les gros fichiers).
+3. Adapter les **noms de colonnes** à ton export : voir `data/products_import_template.csv`.
+4. Lancer (exemple) :
+
+```bash
+cd services/catalog-api
+python manage.py import_products_csv data/imports/mon_export.csv \
+  --encoding utf-8-sig \
+  --col-name "Drug Name" \
+  --col-price "Price" \
+  --col-sku "Product ID" \
+  --default-category-slug medicaments \
+  --dry-run
+```
+
+Retirer `--dry-run` une fois les colonnes validées. Options utiles : `--delimiter ";"`, `--price-in-cents`, `--max-rows 500` pour tester.
+
+Le modèle `Product` accepte des noms jusqu’à **500** caractères, descriptions longues (`summary` en texte), SKU jusqu’à **128** caractères, slug jusqu’à **200** caractères (migration `0008`).
+
+### Jeu Kaggle « Pharmacy Products Pricing Egypt » (fichier intégré → stockage **DZD**)
+
+Le fichier `services/catalog-api/data/imports/drugs_egypt.csv` provient du dataset  
+[abdurrahmanmorsi/pharmacy-products-pricing-egypt-egp-and-usd](https://www.kaggle.com/datasets/abdurrahmanmorsi/pharmacy-products-pricing-egypt-egp-and-usd)  
+(colonnes `name`, `price_EGP`, etc. — sans colonne catégorie).
+
+- **Catégories** : uniquement celles déjà créées par `seed_demo`.  
+  L’import applique d’abord des **mots-clés** (anglais) sur le nom ; pour le reste, une **répartition équilibrée** envoie chaque produit vers la catégorie **la moins remplie** afin de remplir tout le catalogue sans inventer de slug.
+- **Prix** : le CSV est en **EGP** ; la commande convertit en **dinars algériens (DZD)** avec `EGP_TO_DZD_RATE` (combien de DZD pour 1 EGP). À ajuster dans `.env` selon le cours du jour (valeur indicative).
+
+Import (après `migrate` et `seed_demo`) :
+
+```bash
+cd services/catalog-api
+python manage.py import_kaggle_egypt_drugs --dry-run   # puis sans --dry-run
+```
+
+**web-ui** : affichage en dinar algérien — `CURRENCY_CODE=DZD`, `CURRENCY_SYMBOL=DA` (défaut du projet).
+
+### Devise (Algérie, Égypte, etc.)
+
+Les montants en base sont des **nombres dans ta monnaie locale** (aucune conversion automatique). Pour l’affichage dans **web-ui**, configure dans `.env` ou `docker-compose` :
+
+| Pays | `CURRENCY_CODE` | `CURRENCY_SYMBOL` (exemples) |
+|------|-----------------|-------------------------------|
+| Algérie | `DZD` | `DA` ou `DZD` |
+| Égypte | `EGP` | `ج.م` ou `E£` ou `EGP` |
+
+Exemple Égypte dans `.env` : `CURRENCY_CODE=EGP` et `CURRENCY_SYMBOL=ج.م`
+
 ## API (aperçu)
 
 - Obtenir un jeton : `POST http://auth.localhost:8081/api/token/` (ajuster le port si besoin)  
@@ -69,14 +121,52 @@ Créés au démarrage du service `auth-service` :
 
 ## Déploiement multi-serveurs
 
-En production, chaque image peut être déployée sur une machine distincte : mêmes variables d’environnement, même réseau (VPN / VPC), instances enregistrées dans Consul, Traefik en frontal pointant vers les nœuds ou utilisant la découverte Consul selon votre maquette.
+En production, **chaque microservice** peut tourner sur **une machine (ou VM) distincte** : pousser les images vers un registre, puis sur chaque hôte lancer **un seul** service applicatif avec les variables d’environnement pointant vers l’infra partagée (Consul, RabbitMQ, Postgres, etc. sur d’autres serveurs ou services managés). Traefik reste en frontal (serveur dédié ou cluster) ; le routage peut s’appuyer sur les labels Docker, sur la découverte Consul, ou sur un DNS interne selon votre maquette.
+
+Exemple de répartition type (une instance par ligne) :
+
+| Hôte | Services à exécuter |
+|------|---------------------|
+| S1 | Traefik |
+| S2 | Consul |
+| S3 | RabbitMQ |
+| S4 | postgres-auth |
+| S5 | postgres-catalog |
+| S6 | auth-service |
+| S7 | catalog-api |
+| S8 | notification-worker |
+| S9 | web-ui |
+
+Adaptez `DATABASE_URL`, `AMQP_URL`, `CONSUL_HTTP_ADDR`, `AUTH_INTERNAL_URL`, `API_INTERNAL_URL` pour viser les **adresses réseau** des autres machines (pas `localhost` entre hôtes).
+
+## Équilibrage de charge (démo)
+
+Avec plusieurs réplicas du même service derrière Traefik :
+
+```bash
+docker compose up --build --scale catalog-api=2
+```
+
+Traefik répartit le trafic entre les instances (même jeu de labels).
 
 ## Découverte Consul
 
-Exemple après démarrage :
+Exemple après démarrage (port **8501** si le mapping du `docker-compose.yml` est `8501:8500`) :
 
 ```bash
-curl http://localhost:8500/v1/catalog/services
+curl http://localhost:8501/v1/catalog/services
 ```
 
-Les services enregistrent un health check HTTP sur `/health/`.
+Les services HTTP enregistrent un health check sur `/health/` via `docker/scripts/register_consul.py`.
+
+## Contraintes du cahier des charges (synthèse)
+
+| Exigence | Réalisation dans ce dépôt |
+|----------|-------------------------|
+| API REST métier (CRUD + endpoints métier) | `catalog-api` : `/api/products/`, `/api/categories/`, `/api/patients/`, `/api/orders/`, etc. (DRF ViewSets) |
+| Service d’authentification (tokens, rôles) | `auth-service` : JWT (`/api/token/`, refresh), claims `role` / `email`, utilisateurs `ADMIN` / `PHARMACY` / `PRO` |
+| UI consommant l’API + auth | `web-ui` : session + appels à l’auth et au catalogue (`apps/shop/api_client.py`) |
+| Communication asynchrone (RabbitMQ) | Exchange `marketpharm`, producteur dans `catalog-api` (`messaging.py`), consommateur `notification-worker` |
+| Service registry / discovery (Consul) | Enregistrement au démarrage (`register_consul.py`), UI Consul |
+| Reverse proxy / load balancer (Traefik) | Service `traefik` avec routage par `Host` et balance si plusieurs réplicas |
+| Multi-serveurs | Possible en déployant une image par hôte (section ci-dessus) ; en local, un conteneur par service simule la séparation |

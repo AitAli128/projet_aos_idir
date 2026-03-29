@@ -77,9 +77,9 @@
     
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
       <div>
-        <label for="price" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Prix (DA) <span style="color: var(--danger);">*</span></label>
+        <label for="price" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-main);">Prix ({{ CURRENCY_SYMBOL }}) <span style="color: var(--danger);">*</span></label>
         <div style="position: relative;">
-          <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-weight: 600;">DA</span>
+          <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-weight: 600;">{{ CURRENCY_SYMBOL }}</span>
           <input 
             type="number" 
             name="price" 

@@ -13,34 +13,44 @@ def _token(request):
     return request.session.get("access")
 
 
-def _is_admin(request):
-    """Vérifier si l'utilisateur est admin en utilisant le JWT role"""
+def _get_role(request):
     token = _token(request)
     if not token:
-        return False
+        return None
     try:
         import base64
-        # JWT format: header.payload.signature
         parts = token.split('.')
         if len(parts) != 3:
-            return False
-        # Ajouter le padding si nécessaire
+            return None
         payload = parts[1]
         padding = 4 - len(payload) % 4
         if padding != 4:
             payload += '=' * padding
         decoded = base64.urlsafe_b64decode(payload)
         data = json.loads(decoded)
-        return data.get('role') == 'ADMIN'
+        return data.get('role')
     except:
-        return False
+        return None
+
+
+def _is_admin(request):
+    """Vérifier si l'utilisateur est admin ou pharmacie pour accéder au dashboard"""
+    return _get_role(request) in ('ADMIN', 'PHARMACY')
 
 
 def _require_admin(request):
     if not _token(request):
         return redirect(f"{reverse('login')}?next={request.path}")
-    if not _is_admin(request):
+    if _get_role(request) != 'ADMIN':
         messages.error(request, "Accès réservé aux administrateurs.")
+        return redirect("home")
+    return None
+
+def _require_vendor(request):
+    if not _token(request):
+        return redirect(f"{reverse('login')}?next={request.path}")
+    if not _is_admin(request):
+        messages.error(request, "Accès réservé aux vendeurs.")
         return redirect("home")
     return None
 
@@ -138,7 +148,7 @@ def signup_view(request):
                 email=email,
                 password=password,
                 first_name=first_name,
-                role="PRO",
+                role=request.POST.get("role", "PRO"),
             )
         except HTTPError as e:
             try:
@@ -383,7 +393,7 @@ def orders(request):
 
 def admin_dashboard(request):
     """Page d'accueil admin"""
-    redir = _require_admin(request)
+    redir = _require_vendor(request)
     if redir:
         return redir
     return render(request, "shop/admin/dashboard.html")
@@ -391,11 +401,14 @@ def admin_dashboard(request):
 
 def admin_products_list(request):
     """Lister tous les produits (admin)"""
-    redir = _require_admin(request)
+    redir = _require_vendor(request)
     if redir:
         return redir
     try:
-        data = api_client.api_get("products/", _token(request))
+        params = None
+        if _get_role(request) == 'PHARMACY':
+            params = {"my_store": "true"}
+        data = api_client.api_get("products/", _token(request), params=params)
         products = data.get("results", data) if isinstance(data, dict) else data
         if not isinstance(products, list):
             products = []
@@ -419,7 +432,7 @@ def admin_products_list(request):
 
 def admin_product_create(request):
     """Créer un nouveau produit"""
-    redir = _require_admin(request)
+    redir = _require_vendor(request)
     if redir:
         return redir
     
@@ -456,7 +469,7 @@ def admin_product_create(request):
 
 def admin_product_edit(request, product_id: int):
     """Modifier un produit existant"""
-    redir = _require_admin(request)
+    redir = _require_vendor(request)
     if redir:
         return redir
     
@@ -502,7 +515,7 @@ def admin_product_edit(request, product_id: int):
 
 def admin_product_delete(request, product_id: int):
     """Supprimer un produit"""
-    redir = _require_admin(request)
+    redir = _require_vendor(request)
     if redir:
         return redir
     

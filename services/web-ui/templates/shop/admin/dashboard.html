@@ -7,7 +7,7 @@
   <div class="section-head" style="margin-top: 0;">
     <h2><i class="fas fa-gauge"></i> Tableau de bord Admin</h2>
   </div>
-  <p class="text-muted" style="margin-top: -1.5rem; margin-bottom: 2.5rem; font-size: 1.1rem;">Gérez les produits, les commandes et les utilisateurs.</p>
+  <p class="text-muted" style="margin-top: -1.5rem; margin-bottom: 2.5rem; font-size: 1.1rem;">Gérez vos produits{% if user_role == 'ADMIN' %}, les commandes et les utilisateurs{% endif %}.</p>
   
   <div class="grid-cols-4" style="grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
     
@@ -20,6 +20,7 @@
       </a>
     </div>
     
+    {% if user_role == 'ADMIN' %}
     <!-- Commandes Card -->
     <div class="glass-card" style="border-top: 4px solid var(--warning); display: flex; flex-direction: column;">
       <h2 style="font-size: 1.5rem; margin-top: 0; display: flex; align-items: center; gap: 0.5rem;"><i class="fas fa-clipboard-list" style="color: var(--warning);"></i> Commandes</h2>
@@ -37,15 +38,18 @@
         Voir les utilisateurs <i class="fas fa-arrow-right" style="margin-left: 0.5rem;"></i>
       </a>
     </div>
+    {% endif %}
   </div>
   
   <div class="glass-card" style="margin-top: 3rem;">
     <h3 style="margin-top: 0; font-size: 1.25rem;"><i class="fas fa-bolt" style="color: var(--warning);"></i> Actions rapides</h3>
     <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;">
       <a href="{% url 'admin_product_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Ajouter un produit</a>
-      <a href="{% url 'admin_statistics' %}" class="btn btn-outline" style="color: var(--primary); border-color: var(--primary);"><i class="fas fa-chart-line"></i> Statistiques</a>
       <a href="{% url 'admin_products_list' %}" class="btn btn-outline"><i class="fas fa-box"></i> Voir le catalogue</a>
+      {% if user_role == 'ADMIN' %}
+      <a href="{% url 'admin_statistics' %}" class="btn btn-outline" style="color: var(--primary); border-color: var(--primary);"><i class="fas fa-chart-line"></i> Statistiques</a>
       <a href="{% url 'admin_orders_list' %}" class="btn btn-outline"><i class="fas fa-list-check"></i> Voir les commandes</a>
+      {% endif %}
     </div>
   </div>
 </div>

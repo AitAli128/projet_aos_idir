@@ -6,7 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from .messaging import publish_order_created
 from .models import Category, Order, Patient, Product, ProductRating, ProductLike, ProductRecommendation
-from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin
+from .permissions import IsAdminOrReadOnly, IsAdminOrPharmacyOrReadOnly, IsOwnerOrAdmin
 from .serializers import (
     CategorySerializer,
     OrderCreateSerializer,
@@ -28,14 +28,27 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related("category").all().order_by("name")
     serializer_class = ProductSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAdminOrPharmacyOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
     filterset_fields = ("category", "category__slug", "slug")
     search_fields = ("name", "summary", "sku", "category__name")
     ordering_fields = ("name", "price", "stock", "expiration_date")
     ordering = ("name",)
+
+    def get_queryset(self):
+        qs = Product.objects.select_related("category").all()
+        if self.request.query_params.get("my_store") == "true" and self.request.user.is_authenticated:
+            qs = qs.filter(auth_user_id=self.request.user.id)
+        return qs.order_by("name")
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        role = self.request.auth.get("role") if self.request.auth else getattr(user, "role", None)
+        if role == "PHARMACY":
+            serializer.save(auth_user_id=user.id)
+        else:
+            serializer.save()
 
 
 class PatientViewSet(viewsets.ModelViewSet):

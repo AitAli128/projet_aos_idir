@@ -91,7 +91,7 @@
       </div>
       
       <div class="product-price-row">
-        <span class="price">{{ p.price }} DA</span>
+        <span class="price">{{ p.price }} {{ CURRENCY_SYMBOL }}</span>
         <div class="product-interactions">
           {% if request.session.access %}
               <a href="{% url 'cart_add' p.id %}" class="btn btn-primary btn-icon" title="Ajouter au panier"><i class="fas fa-cart-plus"></i></a>

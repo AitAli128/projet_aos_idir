@@ -44,7 +44,7 @@
                   <code style="background: rgba(0,0,0,0.05); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; color: var(--text-muted);">{{ product.sku }}</code>
                 </td>
                 <td style="padding: 1.2rem 1.5rem;">
-                  <strong style="color: var(--primary);">{{ product.price|floatformat:2 }} DA</strong>
+                  <strong style="color: var(--primary);">{{ product.price|floatformat:2 }} {{ CURRENCY_SYMBOL }}</strong>
                 </td>
                 <td style="padding: 1.2rem 1.5rem;">
                   <span class="badge {% if product.stock > 10 %}badge-ok{% elif product.stock > 0 %}badge-low{% else %}badge-out{% endif %}" style="margin-bottom: 0;">
