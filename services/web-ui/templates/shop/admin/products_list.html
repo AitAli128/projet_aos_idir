@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Produits{% endblock %}
+
+{% block content %}
+<div class="main">
+  <div class="section-head" style="margin-top: 0px;">
+    <h2><i class="fas fa-box-open"></i> Gestion des Produits</h2>
+    <a href="{% url 'admin_product_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Ajouter un produit</a>
+  </div>
+
+  {% if messages %}
+    <ul class="messages">
+    {% for message in messages %}
+      <li class="{% if 'success' in message.tags %}success{% else %}error{% endif %}">
+        <i class="fas {% if 'success' in message.tags %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i> {{ message }}
+      </li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if products %}
+    <div class="glass-card" style="padding: 0; overflow: hidden; margin-top: 2rem;">
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr style="background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--card-border);">
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Nom</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">SKU</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Prix</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Stock</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Catégorie</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for product in products %}
+              <tr style="border-bottom: 1px solid var(--card-border); transition: background 0.2s;">
+                <td style="padding: 1.2rem 1.5rem;">
+                  <strong style="color: var(--text-main); font-size: 1.05rem;">{{ product.name }}</strong><br>
+                  <span style="color: var(--text-muted); font-size: 0.85rem;">{{ product.summary|truncatewords:10 }}</span>
+                </td>
+                <td style="padding: 1.2rem 1.5rem;">
+                  <code style="background: rgba(0,0,0,0.05); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; color: var(--text-muted);">{{ product.sku }}</code>
+                </td>
+                <td style="padding: 1.2rem 1.5rem;">
+                  <strong style="color: var(--primary);">{{ product.price|floatformat:2 }} {{ CURRENCY_SYMBOL }}</strong>
+                </td>
+                <td style="padding: 1.2rem 1.5rem;">
+                  <span class="badge {% if product.stock > 10 %}badge-ok{% elif product.stock > 0 %}badge-low{% else %}badge-out{% endif %}" style="margin-bottom: 0;">
+                    {{ product.stock }}
+                  </span>
+                </td>
+                <td style="padding: 1.2rem 1.5rem; color: var(--text-muted);">{{ product.category_name|default:"—" }}</td>
+                <td style="padding: 1.2rem 1.5rem; text-align: right;">
+                  <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <a href="{% url 'admin_product_edit' product.id %}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                      <i class="fas fa-pen"></i>
+                    </a>
+                    <a href="{% url 'admin_product_delete' product.id %}" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: var(--danger); color: white; border: none;" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">
+                      <i class="fas fa-trash"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="glass-card" style="text-align: center; padding: 4rem 2rem; margin-top: 2rem;">
+      <i class="fas fa-box-open text-muted" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+      <p style="font-size: 1.1rem; color: var(--text-muted);">Aucun produit trouvé.</p>
+      <a href="{% url 'admin_product_create' %}" class="btn btn-primary" style="margin-top: 1.5rem;">
+        <i class="fas fa-plus"></i> Créer un produit
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

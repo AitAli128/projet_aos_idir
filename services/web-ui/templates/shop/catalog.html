@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Catalogue — MarketPharm{% endblock %}
+
+{% block content %}
+<div class="section-head" style="margin-top: 0;">
+  <h2><i class="fas fa-boxes-stacked" style="color: var(--primary);"></i> Catalogue de Produits</h2>
+</div>
+
+<div class="glass-card" style="margin-bottom: 2.5rem; padding: 1.5rem 2rem;">
+  <form method="get" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+    <div style="flex: 1; min-width: 250px;">
+      <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Rechercher par nom, référence..." class="form-input">
+    </div>
+    <div>
+      <input type="number" name="min_stock" value="{{ request.GET.min_stock|default:'' }}" min="0" placeholder="Stock min" class="form-input" style="width: 140px;">
+    </div>
+    <div>
+      <select name="category" class="form-input" style="width: 200px; cursor: pointer;">
+        <option value="">Toutes les catégories</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if selected_category_id|stringformat:'s' == cat.id|stringformat:'s' or request.GET.category|stringformat:'s' == cat.id|stringformat:'s' %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filtrer</button>
+  </form>
+</div>
+
+<div class="grid-cols-4">
+  {% for p in results %}
+    <article class="glass-card product-card" style="position: relative;">
+      <div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;">
+        {% if p.stock == 0 %}
+          <span class="badge badge-out" style="margin: 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"><i class="fas fa-times-circle"></i> Rupture</span>
+        {% elif p.stock <= 10 %}
+          <span class="badge badge-low" style="margin: 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"><i class="fas fa-exclamation-circle"></i> Stock faible</span>
+        {% else %}
+          <span class="badge badge-ok" style="margin: 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"><i class="fas fa-check-circle"></i> {{ p.stock }}</span>
+        {% endif %}
+      </div>
+      
+      <div class="product-img">
+        {% if p.image_url %}
+          <img src="{{ p.image_url }}" alt="{{ p.name }}">
+        {% elif p.image %}
+          <img src="{{ p.image }}" alt="{{ p.name }}">
+        {% else %}
+          <i class="fas fa-capsules"></i>
+        {% endif %}
+      </div>
+      
+      <div class="product-rating-summary">
+        {% if p.rating_count > 0 %}
+          <span style="color: var(--warning);"><i class="fas fa-star"></i> {{ p.average_rating|floatformat:1 }}</span>
+          <span>({{ p.rating_count }} avis)</span>
+        {% else %}
+          <span>Aucun avis</span>
+        {% endif %}
+        
+        {% if request.session.access %}
+          {% if p.user_rating is not None %}
+            <span style="margin-left: 0.5rem; font-size: 0.8rem; color: var(--primary);">Votre note: {{ p.user_rating }}⭐</span>
+            <button class="btn-delete-rating" data-product-id="{{ p.id }}">Supprimer</button>
+          {% else %}
+            <div class="star-rating" data-product-id="{{ p.id }}" style="margin-left: 0.5rem;" title="Noter ce produit">
+              <i class="far fa-star" data-rating="1"></i>
+              <i class="far fa-star" data-rating="2"></i>
+              <i class="far fa-star" data-rating="3"></i>
+              <i class="far fa-star" data-rating="4"></i>
+              <i class="far fa-star" data-rating="5"></i>
+            </div>
+          {% endif %}
+        {% endif %}
+      </div>
+
+      <h3>{{ p.name }}</h3>
+      <span class="product-cat">{{ p.category_name }}</span>
+      <p class="product-summary">{{ p.summary }}</p>
+      
+      <div style="margin-bottom: auto; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          {% if p.expired %}
+            <span class="badge badge-expired"><i class="fas fa-skull"></i> Produit périmé</span>
+          {% elif p.expiring_soon %}
+            <span class="badge badge-alert"><i class="fas fa-clock"></i> Périme bientôt</span>
+          {% endif %}
+        </div>
+        <div class="badge-points">
+          <i class="fas fa-check-circle" style="font-size: 0.8rem;"></i> {{ p.stock|default:"0"|add:"150" }}
+        </div>
+      </div>
+      
+      <div class="product-price-row">
+        <span class="price">{{ p.price }} {{ CURRENCY_SYMBOL }}</span>
+        <div class="product-interactions">
+          {% if request.session.access %}
+              <a href="{% url 'cart_add' p.id %}" class="btn btn-primary btn-icon" title="Ajouter au panier"><i class="fas fa-cart-plus"></i></a>
+              <button class="btn btn-icon btn-heart btn-like-toggle {% if p.is_liked_by_user %}active{% endif %}" data-product-id="{{ p.id }}" title="Aimer">
+                <i class="fas fa-heart"></i>
+              </button>
+              <div class="recommendation-toggle btn-recommend-toggle {% if p.is_recommended_by_user %}active{% endif %}" data-product-id="{{ p.id }}" title="Recommander">
+                <i class="{% if p.is_recommended_by_user %}fas{% else %}fa-regular{% endif %} fa-thumbs-up"></i>
+                <span class="recommendation-count">{{ p.user_recommendations|default:0 }}</span>
+              </div>
+          {% else %}
+              <a href="{% url 'login' %}?next={% url 'catalog' %}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="S'identifier pour interagir"><i class="fas fa-lock"></i></a>
+          {% endif %}
+        </div>
+      </div>
+    </article>
+  {% empty %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 5rem 1rem;">
+      <i class="fas fa-box-open" style="font-size: 4rem; color: var(--text-muted); margin-bottom: 1.5rem; opacity: 0.3;"></i>
+      <h3 style="font-size: 1.5rem;">Aucun produit trouvé</h3>
+      <p class="text-muted">Désolé, aucun produit ne correspond à votre recherche actuelle.</p>
+      <a href="{% url 'catalog' %}" class="btn btn-outline" style="margin-top: 1rem;">Réinitialiser les filtres</a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'shop/js/interactions.js' %}"></script>
+{% endblock %}

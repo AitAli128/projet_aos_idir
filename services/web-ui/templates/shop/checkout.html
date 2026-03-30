@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Finaliser la commande — MarketPharm{% endblock %}
+
+{% block content %}
+<div class="section-head">
+    <h2><i class="fas fa-shopping-cart"></i> Informations de livraison</h2>
+</div>
+
+<div style="max-width: 800px; margin: 0 auto;">
+    <form method="post" class="glass-card" style="padding: 2rem;">
+        {% csrf_token %}
+        
+        <!-- 🧍‍♂️ 1. Informations utilisateur -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: var(--primary);">
+                <i class="fas fa-user"></i> Informations utilisateur
+            </h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label for="phone" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">
+                        Téléphone ⭐
+                    </label>
+                    <input type="tel" name="phone" id="phone" class="glass-card" 
+                           style="width: 100%; padding: 0.8rem; background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border);" 
+                           required placeholder="05XXXXXXXX">
+                </div>
+                <div>
+                    <label for="email" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">
+                        Email ⭐
+                    </label>
+                    <input type="email" name="email" id="email" class="glass-card" 
+                           style="width: 100%; padding: 0.8rem; background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border);" 
+                           required placeholder="email@example.com">
+                </div>
+            </div>
+        </div>
+
+        <!-- 📍 2. Adresse -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: var(--primary);">
+                <i class="fas fa-map-marker-alt"></i> Adresse de livraison
+            </h3>
+            
+            <div style="margin-bottom: 1rem;">
+                <label for="city" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">
+                    Ville (Wilaya) ⭐
+                </label>
+                <select name="city" id="city" class="glass-card" 
+                        style="width: 100%; padding: 0.8rem; background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border);" required>
+                    <option value="" disabled selected>Sélectionnez votre Wilaya</option>
+                    <option value="Adrar">01 - Adrar</option>
+                    <option value="Ain Defla">44 - Ain Defla</option>
+                    <option value="Ain Temouchent">46 - Ain Temouchent</option>
+                    <option value="Alger">16 - Alger</option>
+                    <option value="Annaba">23 - Annaba</option>
+                    <option value="Batna">05 - Batna</option>
+                    <option value="Bechar">08 - Bechar</option>
+                    <option value="Bejaia">06 - Bejaia</option>
+                    <option value="Beni Abbes">52 - Beni Abbes</option>
+                    <option value="Biskra">07 - Biskra</option>
+                    <option value="Blida">09 - Blida</option>
+                    <option value="Bordj Badji Mokhtar">50 - Bordj Badji Mokhtar</option>
+                    <option value="Bordj Bou Arreridj">34 - Bordj Bou Arreridj</option>
+                    <option value="Bouira">10 - Bouira</option>
+                    <option value="Boumerdes">35 - Boumerdes</option>
+                    <option value="Chlef">02 - Chlef</option>
+                    <option value="Constantine">25 - Constantine</option>
+                    <option value="Djanet">56 - Djanet</option>
+                    <option value="Djelfa">17 - Djelfa</option>
+                    <option value="El Bayadh">32 - El Bayadh</option>
+                    <option value="El Menia">58 - El Menia</option>
+                    <option value="El M'ghair">57 - El M'ghair</option>
+                    <option value="El Oued">39 - El Oued</option>
+                    <option value="El Tarf">36 - El Tarf</option>
+                    <option value="Ghardaia">47 - Ghardaia</option>
+                    <option value="Guelma">24 - Guelma</option>
+                    <option value="Illizi">33 - Illizi</option>
+                    <option value="In Guezzam">54 - In Guezzam</option>
+                    <option value="In Salah">53 - In Salah</option>
+                    <option value="Jijel">18 - Jijel</option>
+                    <option value="Khenchela">40 - Khenchela</option>
+                    <option value="Laghouat">03 - Laghouat</option>
+                    <option value="Mascara">29 - Mascara</option>
+                    <option value="Medea">26 - Medea</option>
+                    <option value="Mila">43 - Mila</option>
+                    <option value="Mostaganem">27 - Mostaganem</option>
+                    <option value="M'Sila">28 - M'Sila</option>
+                    <option value="Naama">45 - Naama</option>
+                    <option value="Oran">31 - Oran</option>
+                    <option value="Ouargla">30 - Ouargla</option>
+                    <option value="Ouled Djellal">51 - Ouled Djellal</option>
+                    <option value="Oum El Bouaghi">04 - Oum El Bouaghi</option>
+                    <option value="Relizane">48 - Relizane</option>
+                    <option value="Saida">20 - Saida</option>
+                    <option value="Setif">19 - Setif</option>
+                    <option value="Sidi Bel Abbes">22 - Sidi Bel Abbes</option>
+                    <option value="Skikda">21 - Skikda</option>
+                    <option value="Souk Ahras">41 - Souk Ahras</option>
+                    <option value="Tamanrasset">11 - Tamanrasset</option>
+                    <option value="Tebessa">12 - Tebessa</option>
+                    <option value="Tiaret">14 - Tiaret</option>
+                    <option value="Timimoun">49 - Timimoun</option>
+                    <option value="Tindouf">37 - Tindouf</option>
+                    <option value="Tipaza">42 - Tipaza</option>
+                    <option value="Tissemsilt">38 - Tissemsilt</option>
+                    <option value="Tizi Ouzou">15 - Tizi Ouzou</option>
+                    <option value="Tlemcen">13 - Tlemcen</option>
+                    <option value="Touggourt">55 - Touggourt</option>
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label for="commune" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">
+                        Commune (optionnel)
+                    </label>
+                    <input type="text" name="commune" id="commune" class="glass-card" 
+                           style="width: 100%; padding: 0.8rem; background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border);" 
+                           placeholder="El Harrach">
+                </div>
+                <div>
+                    <label for="postal_code" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">
+                        Code postal (optionnel)
+                    </label>
+                    <input type="text" name="postal_code" id="postal_code" class="glass-card" 
+                           style="width: 100%; padding: 0.8rem; background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border);" 
+                           placeholder="16000">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label for="detailed_address" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">
+                    Adresse détaillée ⭐
+                </label>
+                <textarea name="detailed_address" id="detailed_address" rows="3" class="glass-card" 
+                          style="width: 100%; padding: 0.8rem; background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border);" 
+                          required placeholder="Ex: 123 Rue de la Liberté, Immeuble A, Appartement 4"></textarea>
+            </div>
+        </div>
+
+        <!-- 🚚 3. Méthode de livraison -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem; color: var(--primary);">
+                <i class="fas fa-truck"></i> Méthode de livraison
+            </h3>
+            
+            <div style="display: flex; gap: 1rem;">
+                <label style="flex: 1; padding: 1rem; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; background: var(--bg-hover);">
+                    <input type="radio" name="delivery_method" value="domicile" checked style="margin-right: 0.5rem;">
+                    <strong>Livraison à domicile</strong>
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        Livraison dans les 24-48h
+                    </div>
+                </label>
+                
+                <label style="flex: 1; padding: 1rem; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; background: var(--bg-hover);">
+                    <input type="radio" name="delivery_method" value="point_relais" style="margin-right: 0.5rem;">
+                    <strong>Point relais</strong>
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        Retrait dans un point relais
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Récapitulatif -->
+        <div style="background: var(--bg-hover); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h4 style="margin: 0 0 1rem 0;">
+                <i class="fas fa-receipt"></i> Récapitulatif de la commande
+            </h4>
+            
+            {% if cart_items %}
+                {% for item in cart_items %}
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);">
+                    <span>{{ item.product.name }} x {{ item.quantity }}</span>
+                    <span>{{ item.total_price }} {{ CURRENCY_SYMBOL }}</span>
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--primary);">
+                <span style="font-size: 1.1rem; font-weight: bold;">Total à payer</span>
+                <strong style="font-size: 1.3rem; color: var(--primary);">{{ cart_total }} {{ CURRENCY_SYMBOL }}</strong>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+            <i class="fas fa-check-circle"></i> Confirmer la commande
+        </button>
+    </form>
+</div>
+
+<script>
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const phone = document.getElementById('phone').value;
+    const email = document.getElementById('email').value;
+    const city = document.getElementById('city').value;
+    const detailedAddress = document.getElementById('detailed_address').value;
+    
+    if (!phone || !email || !city || !detailedAddress) {
+        e.preventDefault();
+        alert('Veuillez remplir tous les champs obligatoires (marqués ⭐)');
+        return false;
+    }
+    
+    // Simple phone validation
+    const phoneRegex = /^(0[5-7][0-9]{8})$/;
+    if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+        e.preventDefault();
+        alert('Veuillez entrer un numéro de téléphone valide (format: 05XXXXXXXX)');
+        return false;
+    }
+});
+
+// Delivery method selection
+document.querySelectorAll('input[name="delivery_method"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('label').forEach(label => {
+            label.style.borderColor = 'var(--border)';
+            label.style.background = 'var(--bg-hover)';
+        });
+        
+        this.closest('label').style.borderColor = 'var(--primary)';
+        this.closest('label').style.background = 'var(--bg-primary)';
+    });
+});
+</script>
+{% endblock %}

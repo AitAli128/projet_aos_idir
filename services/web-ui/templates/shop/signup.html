@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Créer un compte{% endblock %}
+
+{% block extra_css %}
+<style>
+  .auth-hero {
+    background: linear-gradient(135deg, var(--green-light) 0%, #fff 100%);
+    border-radius: 28px;
+    padding: 3rem 1rem;
+    margin: 2rem auto;
+    max-width: 600px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+  }
+  .auth-panel {
+    background: white;
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 35px -12px rgba(46,125,50,0.2);
+    border: 1px solid var(--border);
+  }
+  .auth-panel h1 {
+    font-size: 1.8rem;
+    margin: 0 0 0.5rem;
+    text-align: center;
+  }
+  .auth-panel .sub {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--muted);
+  }
+  .form-group {
+    margin-bottom: 1.2rem;
+  }
+  .form-group label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 500;
+  }
+  .form-input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: 0.2s;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(46,125,50,0.1);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-hero">
+  <div class="auth-panel">
+    <h1>Créer un compte pro</h1>
+    <div class="sub">Rejoignez MarketPharm en quelques secondes</div>
+    
+    <form method="post" class="stack">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label>Nom de l'établissement / Nom complet</label>
+        <input type="text" name="full_name" class="form-input" required placeholder="Pharmacie Centrale">
+      </div>
+      
+      <div class="form-group">
+        <label>E-mail professionnel</label>
+        <input type="email" name="email" class="form-input" required autocomplete="email" placeholder="contact@pharmacie.dz">
+      </div>
+      
+      <div class="form-group">
+        <label>Type de compte</label>
+        <select name="role" class="form-input" required>
+          <option value="PRO">Client Professionnel (Acheteur)</option>
+          <option value="PHARMACY">Pharmacie (Vendeur)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <input type="password" name="password" class="form-input" required placeholder="••••••••">
+      </div>
+      
+      <div class="form-group">
+        <label>Confirmer le mot de passe</label>
+        <input type="password" name="password2" class="form-input" required placeholder="••••••••">
+      </div>
+      
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; font-size: 1.1rem; padding: 0.8rem;"><i class="fas fa-user-plus"></i> Créer mon compte</button>
+    </form>
+    
+    <div style="text-align: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+      <span class="muted">Vous avez déjà un compte ?</span>
+      <a href="{% url 'login' %}" style="font-weight: 600; color: var(--green);">Connectez-vous</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

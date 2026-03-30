@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Accueil — {{ T.brand|default:'MarketPharm' }}{% endblock %}
+
+{% block content %}
+<!-- Hero + Search -->
+<section class="search-hero">
+  <h2>L'excellence médicale à portée de main</h2>
+  <p>Fournisseur de confiance pour les professionnels de santé et les particuliers</p>
+
+  <div class="search-input-wrapper">
+    <form method="get" action="{% url 'catalog' %}" style="display: flex; width: 100%;">
+      <input type="text" name="q" value="{{ search_query }}" placeholder="Rechercher un produit, une référence..."
+        aria-label="Rechercher">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Rechercher</button>
+    </form>
+  </div>
+
+  <div style="display: flex; justify-content: center; margin-top: 2rem; gap: 1rem;">
+    <a class="btn btn-primary" href="{% url 'catalog' %}"><i class="fas fa-boxes-stacked"></i> Voir tous nos
+      produits</a>
+    {% if not request.session.access %}
+    <a class="btn btn-outline" href="{% url 'login' %}"><i class="fas fa-user-doctor"></i> Espace professionnel</a>
+    {% endif %}
+  </div>
+</section>
+
+<!-- Produits phares -->
+<section>
+  <div class="section-head" style="margin-top: 0;">
+    <h2><i class="fas fa-star" style="color: var(--warning);"></i> Produits Recommandés</h2>
+    <a href="{% url 'catalog' %}">Voir tout le catalogue <i class="fas fa-arrow-right"></i></a>
+  </div>
+
+  <div class="grid-cols-4">
+    {% for product in featured_products %}
+    <article class="glass-card product-card">
+      <div class="product-img">
+        {% if product.image %}
+        <img src="{{ product.image }}" alt="{{ product.name }}">
+        {% else %}
+        <i class="fas fa-pills"></i>
+        {% endif %}
+      </div>
+
+      <div class="product-rating-summary">
+        {% if product.rating_count > 0 %}
+          <span style="color: var(--warning);"><i class="fas fa-star"></i> {{ product.average_rating|floatformat:1 }}</span>
+          <span>({{ product.rating_count }} avis)</span>
+        {% else %}
+          <span>Aucun avis</span>
+        {% endif %}
+
+        {% if request.session.access %}
+          {% if product.user_rating is not None %}
+            <span style="margin-left: 0.5rem; font-size: 0.8rem; color: var(--primary);">Votre note: {{ product.user_rating }}⭐</span>
+            <button class="btn-delete-rating" data-product-id="{{ product.id }}">Supprimer</button>
+          {% else %}
+            <div class="star-rating" data-product-id="{{ product.id }}" style="margin-left: 0.5rem;" title="Noter ce produit">
+              <i class="far fa-star" data-rating="1"></i>
+              <i class="far fa-star" data-rating="2"></i>
+              <i class="far fa-star" data-rating="3"></i>
+              <i class="far fa-star" data-rating="4"></i>
+              <i class="far fa-star" data-rating="5"></i>
+            </div>
+          {% endif %}
+        {% endif %}
+      </div>
+
+      <h3>{{ product.name }}</h3>
+      <span class="product-cat">{{ product.category_name }}</span>
+
+      <div style="margin-bottom: auto; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span class="badge badge-ok"><i class="fas fa-check-circle"></i> En stock</span>
+          <p class="text-muted" style="font-size: 0.85rem; margin: 0;">{{ product.unit_info|default:"À l'unité" }}</p>
+        </div>
+        <div class="badge-points">
+          <i class="fas fa-check-circle" style="font-size: 0.8rem;"></i> {{ product.stock|default:"0"|add:"150" }}
+        </div>
+      </div>
+
+      <div class="product-price-row">
+        <span class="price">{{ product.price }} {{ CURRENCY_SYMBOL }}</span>
+        <div class="product-interactions">
+          {% if request.session.access %}
+              <a href="{% url 'cart_add' product.id %}" class="btn btn-primary btn-icon" title="Ajouter au panier"><i class="fas fa-cart-plus"></i></a>
+              <button class="btn btn-icon btn-heart btn-like-toggle {% if product.is_liked_by_user %}active{% endif %}" data-product-id="{{ product.id }}" title="Aimer">
+                <i class="fas fa-heart"></i>
+              </button>
+              <div class="recommendation-toggle btn-recommend-toggle {% if product.is_recommended_by_user %}active{% endif %}" data-product-id="{{ product.id }}" title="Recommander">
+                <i class="{% if product.is_recommended_by_user %}fas{% else %}fa-regular{% endif %} fa-thumbs-up"></i>
+                <span class="recommendation-count">{{ product.user_recommendations|default:0 }}</span>
+              </div>
+          {% else %}
+              <a href="{% url 'login' %}?next={% url 'home' %}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="S'identifier pour interagir"><i class="fas fa-lock"></i> S'identifier</a>
+          {% endif %}
+        </div>
+      </div>
+    </article>
+    {% empty %}
+    <p class="text-muted" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">Aucun produit phare
+      disponible.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Catégories Bento Grid -->
+<section style="margin-top: 4rem;">
+  <div class="section-head">
+    <h2><i class="fas fa-th-large"></i> Nos Catégories</h2>
+    <p>Trouvez exactement ce dont vous avez besoin</p>
+  </div>
+  
+  <div class="bento-grid">
+    <a href="{% url 'catalog' %}?category=tests" class="bento-card bento-tests">
+      <h3>Test</h3>
+      <p>Dépistage et diagnostics <span>›</span></p>
+      <img src="{% static 'shop/img/tests.png' %}" alt="Tests rapides" class="bento-img">
+    </a>
+
+    <a href="{% url 'catalog' %}?category=masques" class="bento-card bento-masques">
+      <h3>Masques</h3>
+      <p>Protection et sécurité <span>›</span></p>
+      <img src="{% static 'shop/img/masks.png' %}" alt="Masques" class="bento-img">
+    </a>
+
+    <a href="{% url 'catalog' %}?category=gants" class="bento-card bento-gants">
+      <h3>Gants</h3>
+      <p>Protection médicale <span>›</span></p>
+      <img src="{% static 'shop/img/gloves.png' %}" alt="Gants" class="bento-img">
+    </a>
+
+    <a href="{% url 'catalog' %}?category=consommables" class="bento-card bento-consommables">
+      <h3>Consommables</h3>
+      <p>Matériel médical <span>›</span></p>
+      <img src="{% static 'shop/img/cons.png' %}" alt="Consommables" class="bento-img">
+    </a>
+
+    <a href="{% url 'catalog' %}?category=bebe" class="bento-card bento-bebe">
+      <h3>Bébé</h3>
+      <p>Soin et nourriture <span>›</span></p>
+      <img src="{% static 'shop/img/bebe.png' %}" alt="Bébé" class="bento-img">
+    </a>
+  </div>
+
+  <div style="text-align: center; margin: 3rem 0;">
+    <a href="{% url 'catalog' %}" class="btn btn-outline"
+      style="padding: 0.8rem 2.5rem; border-radius: 50px; font-weight: 600;">Voir plus de produits</a>
+  </div>
+</section>
+
+<!-- Avantages -->
+<section style="margin-top: 5rem;">
+  <div class="grid-cols-4" style="gap: 1.5rem;">
+    <div class="glass-card"
+      style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem;">
+      <i class="fas fa-truck-fast" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+      <h3 style="margin: 0 0 0.5rem;">Livraison 24h</h3>
+      <p class="text-muted" style="font-size: 0.9rem; margin: 0;">Expédition immédiate pour les pros</p>
+    </div>
+    <div class="glass-card"
+      style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem;">
+      <i class="fas fa-shield-halved" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+      <h3 style="margin: 0 0 0.5rem;">Paiement sécurisé</h3>
+      <p class="text-muted" style="font-size: 0.9rem; margin: 0;">Multiples méthodes de paiement</p>
+    </div>
+    <div class="glass-card"
+      style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem;">
+      <i class="fas fa-certificate" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+      <h3 style="margin: 0 0 0.5rem;">Qualité certifiée</h3>
+      <p class="text-muted" style="font-size: 0.9rem; margin: 0;">Produits CE et norme ISO</p>
+    </div>
+    <div class="glass-card"
+      style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1.5rem;">
+      <i class="fas fa-headset" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+      <h3 style="margin: 0 0 0.5rem;">Support pro B2B</h3>
+      <p class="text-muted" style="font-size: 0.9rem; margin: 0;">Assistance prioritaire 7j/7</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'shop/js/interactions.js' %}"></script>
+{% endblock %}

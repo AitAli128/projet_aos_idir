@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Commandes{% endblock %}
+
+{% block content %}
+<div class="main">
+  <div class="section-head" style="margin-top: 0px;">
+    <h2><i class="fas fa-clipboard-list"></i> Gestion des Commandes</h2>
+  </div>
+
+  {% if messages %}
+    <ul class="messages">
+    {% for message in messages %}
+      <li class="{% if 'success' in message.tags %}success{% else %}error{% endif %}">
+        <i class="fas {% if 'success' in message.tags %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i> {{ message }}
+      </li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if orders %}
+    <div class="glass-card" style="padding: 0; overflow: hidden; margin-top: 2rem;">
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr style="background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--card-border);">
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">ID Commande</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Client ID</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Montant Total</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Statut</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem;">Date</th>
+              <th style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in orders %}
+              <tr style="border-bottom: 1px solid var(--card-border); transition: background 0.2s;">
+                <td style="padding: 1.2rem 1.5rem; font-weight: 700;">#{{ order.id }}</td>
+                <td style="padding: 1.2rem 1.5rem; color: var(--text-muted); font-family: monospace;">{{ order.auth_user_id }}</td>
+                <td style="padding: 1.2rem 1.5rem; font-weight: 700; color: var(--primary);">
+                  {{ order.total|floatformat:2 }} {{ CURRENCY_SYMBOL }}
+                  {% if order.discount_percent %}
+                    <span class="badge badge-low" style="margin-left: 0.5rem; margin-bottom: 0;">-{{ order.discount_percent }}%</span>
+                  {% endif %}
+                </td>
+                <td style="padding: 1.2rem 1.5rem;">
+                  <span class="badge {% if order.status == 'PENDING' %}badge-low{% elif order.status == 'CONFIRMED' %}badge-ok{% elif order.status == 'SHIPPED' %}badge-ok{% elif order.status == 'CANCELLED' %}badge-out{% else %}badge-expired{% endif %}" style="margin-bottom: 0;">
+                    {{ order.status }}
+                  </span>
+                </td>
+                <td style="padding: 1.2rem 1.5rem; font-size: 0.9rem; color: var(--text-muted);">{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                <td style="padding: 1.2rem 1.5rem; text-align: right;">
+                  <a href="{% url 'admin_order_detail' order.id %}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                    <i class="fas fa-eye"></i> Détails
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="glass-card" style="text-align: center; padding: 4rem 2rem; margin-top: 2rem;">
+      <i class="fas fa-box-open text-muted" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+      <p style="font-size: 1.1rem; color: var(--text-muted);">Aucune commande trouvée.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

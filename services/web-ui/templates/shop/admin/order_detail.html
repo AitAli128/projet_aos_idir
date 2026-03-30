@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Commande #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="main" style="max-width: 900px; margin: 0 auto;">
+  <div class="section-head" style="margin-top: 0;">
+    <h2 style="font-size: 2rem; margin: 0;"><i class="fas fa-file-invoice"></i> Commande #{{ order.id }}</h2>
+    <a href="{% url 'admin_orders_list' %}" class="btn btn-outline" style="border: none;"><i class="fas fa-arrow-left"></i> Retour</a>
+  </div>
+
+  {% if messages %}
+    <ul class="messages">
+    {% for message in messages %}
+      <li class="{% if 'success' in message.tags %}success{% else %}error{% endif %}">
+        <i class="fas {% if 'success' in message.tags %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i> {{ message }}
+      </li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+    <!-- Infos Commande -->
+    <div class="glass-card" style="border-top: 4px solid var(--primary);">
+      <h2 style="font-size: 1.2rem; margin-top: 0; padding-bottom: 0.8rem; border-bottom: 1px dashed var(--card-border);"><i class="fas fa-circle-info text-muted"></i> Informations</h2>
+      <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-muted);">
+        <p style="margin: 0;"><strong>Client ID:</strong> <span style="font-family: monospace; color: var(--text-main);">{{ order.auth_user_id }}</span></p>
+        <p style="margin: 0;"><strong>Date:</strong> {{ order.created_at|date:"d/m/Y à H:i" }}</p>
+        <p style="margin: 0;"><strong>Sous-total:</strong> {{ order.subtotal|floatformat:2 }} {{ CURRENCY_SYMBOL }}</p>
+        {% if order.discount_percent %}
+          <p style="margin: 0;"><strong>Remise:</strong> <span class="badge badge-low" style="margin-bottom: 0;">-{{ order.discount_percent }}%</span></p>
+        {% endif %}
+      </div>
+      <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--card-border);">
+        <p style="font-size: 1.4rem; color: var(--primary); margin: 0;"><strong>TOTAL: {{ order.total|floatformat:2 }} {{ CURRENCY_SYMBOL }}</strong></p>
+      </div>
+    </div>
+
+    <!-- Modification Statut -->
+    <div class="glass-card" style="border-top: 4px solid var(--warning);">
+      <h2 style="font-size: 1.2rem; margin-top: 0; padding-bottom: 0.8rem; border-bottom: 1px dashed var(--card-border);"><i class="fas fa-rotate text-muted"></i> Statut</h2>
+      <div style="margin: 1.5rem 0;">
+        <span class="badge {% if order.status == 'PENDING' %}badge-low{% elif order.status == 'CONFIRMED' %}badge-ok{% elif order.status == 'SHIPPED' %}badge-ok{% elif order.status == 'CANCELLED' %}badge-out{% else %}badge-expired{% endif %}" style="font-size: 0.95rem; padding: 0.6rem 1.2rem;">
+          {{ order.status }}
+        </span>
+      </div>
+
+      <form method="post" style="display: flex; flex-direction: column; gap: 1rem;">
+        {% csrf_token %}
+        <select name="status" class="form-input" style="font-weight: 600;">
+          <option value="{{ order.status }}" selected>-- Modifier le statut --</option>
+          {% if order.status != 'PENDING' %}<option value="PENDING">⏳ En attente</option>{% endif %}
+          {% if order.status != 'CONFIRMED' %}<option value="CONFIRMED">✅ Confirmée</option>{% endif %}
+          {% if order.status != 'SHIPPED' %}<option value="SHIPPED">🚚 Expédiée</option>{% endif %}
+          {% if order.status != 'CANCELLED' %}<option value="CANCELLED">❌ Annulée</option>{% endif %}
+        </select>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          <i class="fas fa-floppy-disk"></i> Mettre à jour
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Articles de la Commande -->
+  <div class="glass-card" style="border-top: 4px solid #3b82f6; overflow: hidden; padding: 0;">
+    <h2 style="font-size: 1.2rem; margin: 1.5rem 1.5rem 0; padding-bottom: 0.8rem;"><i class="fas fa-boxes-packing text-muted"></i> Articles de la Commande</h2>
+
+    {% if order.lines %}
+    <div style="overflow-x: auto; margin-top: 1rem;">
+      <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <thead>
+          <tr style="background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--card-border); border-top: 1px solid var(--card-border);">
+            <th style="padding: 1rem 1.5rem; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase;">Produit</th>
+            <th style="padding: 1rem 1.5rem; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; text-align: center;">Quantité</th>
+            <th style="padding: 1rem 1.5rem; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; text-align: right;">Prix Unit.</th>
+            <th style="padding: 1rem 1.5rem; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; text-align: right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in order.lines %}
+          <tr style="border-bottom: 1px solid var(--card-border);">
+            <td style="padding: 1.2rem 1.5rem;">
+              <strong style="color: var(--text-main); font-size: 1.05rem;">{{ line.product_name }}</strong>
+              <br>
+              <span style="font-size: 0.85rem; color: var(--text-muted); font-family: monospace;">ID: {{ line.product }}</span>
+            </td>
+            <td style="padding: 1.2rem 1.5rem; text-align: center; font-weight: 700; font-size: 1.1rem;">{{ line.quantity }}</td>
+            <td style="padding: 1.2rem 1.5rem; text-align: right; color: var(--text-muted);">{{ line.unit_price|floatformat:2 }} {{ CURRENCY_SYMBOL }}</td>
+            <td style="padding: 1.2rem 1.5rem; text-align: right; font-weight: 700; color: var(--primary);">
+              {{ line.line_total|floatformat:2 }} {{ CURRENCY_SYMBOL }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center;">
+      <i class="fas fa-box-open text-muted" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
+      <p style="color: var(--text-muted); margin: 0;">Aucun article dans cette commande.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
