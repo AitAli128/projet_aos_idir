@@ -43,9 +43,17 @@
       
       <div class="product-img">
         {% if p.image_url %}
-          <img src="{{ p.image_url }}" alt="{{ p.name }}">
+          {% if p.image_url|slice:":4" == "http" %}
+            <img src="{{ p.image_url }}" alt="{{ p.name }}">
+          {% else %}
+            <img src="{{ PUBLIC_API_URL }}:8081{{ p.image_url }}" alt="{{ p.name }}">
+          {% endif %}
         {% elif p.image %}
-          <img src="{{ p.image }}" alt="{{ p.name }}">
+          {% if p.image|slice:":4" == "http" %}
+            <img src="{{ p.image }}" alt="{{ p.name }}">
+          {% else %}
+            <img src="{{ PUBLIC_API_URL }}:8081{{ p.image }}" alt="{{ p.name }}">
+          {% endif %}
         {% else %}
           <i class="fas fa-capsules"></i>
         {% endif %}
