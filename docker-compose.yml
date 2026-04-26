@@ -63,10 +63,10 @@ services:
     networks:
       - pharm
 
-  auth-service:
+  auth_service:
     build:
       context: .
-      dockerfile: services/auth-service/Dockerfile
+      dockerfile: auth_service/Dockerfile
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
       DATABASE_URL: postgres://auth:auth@${MASTER_IP}:5434/auth_db
@@ -77,7 +77,7 @@ services:
       SERVICE_PORT: "8000"
       SERVICE_ADDRESS: ${MY_IP}
     volumes:
-      - ./services/auth-service:/app
+      - ./auth_service:/app
     networks:
       - pharm
     labels:
@@ -86,10 +86,10 @@ services:
       - traefik.http.routers.pharm-auth.entrypoints=web
       - traefik.http.services.pharm-auth.loadbalancer.server.port=8000
 
-  catalog-api:
+  catalog_service:
     build:
       context: .
-      dockerfile: services/catalog-api/Dockerfile
+      dockerfile: catalog_service/Dockerfile
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
       DATABASE_URL: postgres://catalog:catalog@${MASTER_IP}:5435/catalog_db
@@ -102,7 +102,7 @@ services:
       SERVICE_PORT: "8000"
       SERVICE_ADDRESS: ${MY_IP}
     volumes:
-      - ./services/catalog-api:/app
+      - ./catalog_service:/app
     networks:
       - pharm
     labels:
@@ -111,10 +111,10 @@ services:
       - traefik.http.routers.catalog.entrypoints=web
       - traefik.http.services.catalog.loadbalancer.server.port=8000
 
-  notification-worker:
+  notification_service:
     build:
       context: .
-      dockerfile: services/notification-worker/Dockerfile
+      dockerfile: notification_service/Dockerfile
     environment:
       AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@${MASTER_IP}:5673/
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
@@ -122,36 +122,24 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
     volumes:
-      - ./services/notification-worker:/app
+      - ./notification_service:/app
     networks:
       - pharm
 
-  web-ui:
+  frontend:
     build:
-      context: .
-      dockerfile: services/web-ui/Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
     environment:
-      DJANGO_SETTINGS_MODULE: config.settings
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_WEB:-change-me-web}
-      AUTH_INTERNAL_URL: http://${MASTER_IP}:8081
-      API_INTERNAL_URL: http://${MASTER_IP}:8081
-      PUBLIC_AUTH_URL: http://${MASTER_IP}:8081
-      PUBLIC_API_URL: http://${MASTER_IP}:8081
-      CURRENCY_CODE: ${CURRENCY_CODE:-DZD}
-      CURRENCY_SYMBOL: ${CURRENCY_SYMBOL:-DA}
-      CONSUL_HTTP_ADDR: http://${MASTER_IP}:8501
-      SERVICE_NAME: web-ui
-      SERVICE_PORT: "8000"
-      SERVICE_ADDRESS: ${MY_IP}
-    volumes:
-      - ./services/web-ui:/app
+      VITE_API_URL: http://${MASTER_IP}:8081
+      VITE_AUTH_URL: http://${MASTER_IP}:8081
     networks:
       - pharm
     labels:
       - traefik.enable=true
       - traefik.http.routers.pharm-web.rule=Host(`${MASTER_IP}`) || Host(`localhost`) || Host(`web.localhost`) || PathPrefix(`/`)
       - traefik.http.routers.pharm-web.entrypoints=web
-      - traefik.http.services.pharm-web.loadbalancer.server.port=8000
+      - traefik.http.services.pharm-web.loadbalancer.server.port=80
 
 networks:
   pharm:
