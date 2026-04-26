@@ -1,7 +1,4 @@
-# MarketPharm-style marketplace — microservices demo
-# Ajoutez à votre fichier hosts :
-# 127.0.0.1 web.localhost api.localhost auth.localhost
-
+# MarketPharm-style marketplace — distributed master configuration
 services:
   traefik:
     image: traefik:v2.11
@@ -9,10 +6,13 @@ services:
       - --api.insecure=true
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
+      - --providers.consulcatalog=true
+      - --providers.consulcatalog.endpoint.address=${MASTER_IP}:8501
       - --entrypoints.web.address=:80
+      - --log.level=DEBUG
     ports:
-      - "80:80"       # Port standard pour l'accès facile (prof et amis)
-      - "8082:8080"   # بدل 8080
+      - "8081:80"
+      - "8082:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -22,15 +22,15 @@ services:
     image: hashicorp/consul:1.17
     command: agent -dev -client=0.0.0.0 -ui
     ports:
-      - "8501:8500"   # بدل 8500 (احتياط)
+      - "8501:8500"
     networks:
       - pharm
 
   rabbitmq:
     image: rabbitmq:3.13-management
     ports:
-      - "5673:5672"    # بدل 5672
-      - "15673:15672"  # بدل 15672
+      - "5673:5672"
+      - "15673:15672"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
@@ -43,6 +43,8 @@ services:
       POSTGRES_USER: auth
       POSTGRES_PASSWORD: auth
       POSTGRES_DB: auth_db
+    ports:
+      - "5434:5432"
     volumes:
       - pg_auth:/var/lib/postgresql/data
     networks:
@@ -54,6 +56,8 @@ services:
       POSTGRES_USER: catalog
       POSTGRES_PASSWORD: catalog
       POSTGRES_DB: catalog_db
+    ports:
+      - "5435:5432"
     volumes:
       - pg_catalog:/var/lib/postgresql/data
     networks:
@@ -65,19 +69,19 @@ services:
       dockerfile: services/auth-service/Dockerfile
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
-      DATABASE_URL: postgres://auth:auth@postgres-auth:5432/auth_db
+      DATABASE_URL: postgres://auth:auth@${MASTER_IP}:5434/auth_db
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-auth}
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-shared-jwt-secret-change-in-prod}
-      CONSUL_HTTP_ADDR: http://${MASTER_IP:-consul}:8500
+      CONSUL_HTTP_ADDR: http://${MASTER_IP}:8501
       SERVICE_NAME: auth-service
       SERVICE_PORT: "8000"
+      SERVICE_ADDRESS: ${MY_IP}
     volumes:
       - ./services/auth-service:/app
     networks:
       - pharm
     labels:
       - traefik.enable=true
-      # Noms uniques (évite le conflit si un autre compose expose aussi "auth" / "web")
       - traefik.http.routers.pharm-auth.rule=Host(`auth.localhost`) || Host(`auth.localhost:8081`)
       - traefik.http.routers.pharm-auth.entrypoints=web
       - traefik.http.services.pharm-auth.loadbalancer.server.port=8000
@@ -88,14 +92,15 @@ services:
       dockerfile: services/catalog-api/Dockerfile
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
-      DATABASE_URL: postgres://catalog:catalog@postgres-catalog:5432/catalog_db
+      DATABASE_URL: postgres://catalog:catalog@${MASTER_IP}:5435/catalog_db
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_CATALOG:-change-me-catalog}
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-shared-jwt-secret-change-in-prod}
-      AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@${MASTER_IP:-rabbitmq}:5672/
+      AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@${MASTER_IP}:5673/
       EGP_TO_DZD_RATE: ${EGP_TO_DZD_RATE:-2.70}
-      CONSUL_HTTP_ADDR: http://${MASTER_IP:-consul}:8500
+      CONSUL_HTTP_ADDR: http://${MASTER_IP}:8501
       SERVICE_NAME: catalog-api
       SERVICE_PORT: "8000"
+      SERVICE_ADDRESS: ${MY_IP}
     volumes:
       - ./services/catalog-api:/app
     networks:
@@ -111,7 +116,7 @@ services:
       context: .
       dockerfile: services/notification-worker/Dockerfile
     environment:
-      AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@${MASTER_IP:-rabbitmq}:5672/
+      AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@${MASTER_IP}:5673/
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -128,22 +133,23 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_WEB:-change-me-web}
-      AUTH_INTERNAL_URL: http://${AUTH_IP:-auth-service}:8000
-      API_INTERNAL_URL: http://${CATALOG_IP:-catalog-api}:8000
-      PUBLIC_AUTH_URL: http://auth.localhost:8081
-      PUBLIC_API_URL: http://api.localhost:8081
+      AUTH_INTERNAL_URL: http://${MASTER_IP}:8081
+      API_INTERNAL_URL: http://${MASTER_IP}:8081
+      PUBLIC_AUTH_URL: http://${MASTER_IP}:8081
+      PUBLIC_API_URL: http://${MASTER_IP}:8081
       CURRENCY_CODE: ${CURRENCY_CODE:-DZD}
       CURRENCY_SYMBOL: ${CURRENCY_SYMBOL:-DA}
-      CONSUL_HTTP_ADDR: http://${MASTER_IP:-consul}:8500
+      CONSUL_HTTP_ADDR: http://${MASTER_IP}:8501
       SERVICE_NAME: web-ui
       SERVICE_PORT: "8000"
+      SERVICE_ADDRESS: ${MY_IP}
     volumes:
       - ./services/web-ui:/app
     networks:
       - pharm
     labels:
       - traefik.enable=true
-      - traefik.http.routers.pharm-web.rule=Host(`172.20.10.4`) || Host(`localhost`) || PathPrefix(`/`)
+      - traefik.http.routers.pharm-web.rule=Host(`${MASTER_IP}`) || Host(`localhost`) || Host(`web.localhost`) || PathPrefix(`/`)
       - traefik.http.routers.pharm-web.entrypoints=web
       - traefik.http.services.pharm-web.loadbalancer.server.port=8000
 

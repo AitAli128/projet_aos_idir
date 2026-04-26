@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  auth_service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DATABASE_URL: postgres://auth:auth@${MASTER_IP}:5434/auth_db
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-auth}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-shared-jwt-secret-change-in-prod}
+      CONSUL_HTTP_ADDR: http://${MASTER_IP}:8501
+      SERVICE_NAME: auth-service
+      SERVICE_PORT: "8000"
+      SERVICE_ADDRESS: ${MY_IP}
+    volumes:
+      - ./services/auth-service:/app
+
+  catalog_service:
+    build:
+      context: .
+      dockerfile: services/catalog-api/Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DATABASE_URL: postgres://catalog:catalog@${MASTER_IP}:5435/catalog_db
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_CATALOG:-change-me-catalog}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-shared-jwt-secret-change-in-prod}
+      AMQP_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@${MASTER_IP}:5673/
+      EGP_TO_DZD_RATE: ${EGP_TO_DZD_RATE:-2.70}
+      CONSUL_HTTP_ADDR: http://${MASTER_IP}:8501
+      SERVICE_NAME: catalog-api
+      SERVICE_PORT: "8000"
+      SERVICE_ADDRESS: ${MY_IP}
+    volumes:
+      - ./services/catalog-api:/app
+
+  frontend:
+    build:
+      context: .
+      dockerfile: services/web-ui/Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_WEB:-change-me-web}
+      AUTH_INTERNAL_URL: http://${MASTER_IP}:8081
+      API_INTERNAL_URL: http://${MASTER_IP}:8081
+      PUBLIC_AUTH_URL: http://${MASTER_IP}:8081
+      PUBLIC_API_URL: http://${MASTER_IP}:8081
+      CURRENCY_CODE: ${CURRENCY_CODE:-DZD}
+      CURRENCY_SYMBOL: ${CURRENCY_SYMBOL:-DA}
+      CONSUL_HTTP_ADDR: http://${MASTER_IP}:8501
+      SERVICE_NAME: web-ui
+      SERVICE_PORT: "8000"
+      SERVICE_ADDRESS: ${MY_IP}
+    volumes:
+      - ./services/web-ui:/app
