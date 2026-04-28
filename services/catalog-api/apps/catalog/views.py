@@ -1,4 +1,9 @@
+from datetime import timedelta
+
 from django.db import transaction
+from django.db.models import Avg, Count, Exists, F, IntegerField, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
+from django.utils import timezone
 from rest_framework import filters, permissions, viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -21,21 +26,69 @@ from .serializers import (
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all().order_by("name")
+    queryset = Category.objects.all().annotate(product_count=Count("products")).order_by("name")
     serializer_class = CategorySerializer
     lookup_field = "slug"
     permission_classes = [IsAdminOrReadOnly]
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related("category").all().order_by("name")
     serializer_class = ProductSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
     filterset_fields = ("category", "category__slug", "slug")
-    search_fields = ("name", "summary", "sku", "category__name")
-    ordering_fields = ("name", "price", "stock", "expiration_date")
+    search_fields = ("name", "brand", "summary", "sku", "category__name")
+    ordering_fields = ("name", "price", "stock", "expiration_date", "rating")
     ordering = ("name",)
+
+    def get_queryset(self):
+        qs = Product.objects.select_related("category").all()
+        today = timezone.now().date()
+
+        qs = qs.annotate(
+            average_rating_value=Coalesce(Avg("ratings__rating"), Value(0.0)),
+            rating_count_value=Count("ratings", distinct=True),
+            likes_count_value=Count("likes", distinct=True),
+            recommendation_count_value=Count("recommendations", distinct=True),
+        )
+
+        user = getattr(self.request, "user", None)
+        if user and user.is_authenticated:
+            user_ratings = ProductRating.objects.filter(product=OuterRef("pk"), auth_user_id=user.id)
+            qs = qs.annotate(
+                liked_by_user=Exists(ProductLike.objects.filter(product=OuterRef("pk"), auth_user_id=user.id)),
+                recommended_by_user=Exists(
+                    ProductRecommendation.objects.filter(product=OuterRef("pk"), auth_user_id=user.id)
+                ),
+                current_user_rating=Subquery(user_ratings.values("rating")[:1], output_field=IntegerField()),
+            )
+
+        min_price = self.request.query_params.get("min_price")
+        max_price = self.request.query_params.get("max_price")
+        availability = self.request.query_params.get("availability")
+        featured = self.request.query_params.get("featured")
+
+        if min_price:
+            qs = qs.filter(price__gte=min_price)
+        if max_price:
+            qs = qs.filter(price__lte=max_price)
+        if featured in {"1", "true", "yes"}:
+            qs = qs.filter(is_featured=True)
+
+        if availability == "in_stock":
+            qs = qs.filter(stock__gt=0)
+        elif availability == "low_stock":
+            qs = qs.filter(stock__gt=0, stock__lte=F("low_stock_threshold"))
+        elif availability == "out_of_stock":
+            qs = qs.filter(stock=0)
+        elif availability == "expiring":
+            qs = qs.filter(
+                expiration_date__isnull=False,
+                expiration_date__gte=today,
+                expiration_date__lte=today + timedelta(days=45),
+            )
+
+        return qs.order_by(*self.ordering)
 
 
 class PatientViewSet(viewsets.ModelViewSet):

@@ -1,12 +1,19 @@
+import base64
+import json
+
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from requests import HTTPError, RequestException
-import json
-
 
 from . import api_client
+from .presentation import build_catalog_metrics, decorate_product, decorate_products
+
+
+def health_check(request):
+    return JsonResponse({"status": "ok", "service": "web-ui"})
 
 
 def _token(request):
@@ -14,25 +21,21 @@ def _token(request):
 
 
 def _is_admin(request):
-    """Vérifier si l'utilisateur est admin en utilisant le JWT role"""
     token = _token(request)
     if not token:
         return False
     try:
-        import base64
-        # JWT format: header.payload.signature
-        parts = token.split('.')
+        parts = token.split(".")
         if len(parts) != 3:
             return False
-        # Ajouter le padding si nécessaire
         payload = parts[1]
         padding = 4 - len(payload) % 4
         if padding != 4:
-            payload += '=' * padding
+            payload += "=" * padding
         decoded = base64.urlsafe_b64decode(payload)
         data = json.loads(decoded)
-        return data.get('role') == 'ADMIN'
-    except:
+        return data.get("role") == "ADMIN"
+    except Exception:
         return False
 
 
@@ -40,9 +43,41 @@ def _require_admin(request):
     if not _token(request):
         return redirect(f"{reverse('login')}?next={request.path}")
     if not _is_admin(request):
-        messages.error(request, "Accès réservé aux administrateurs.")
+        messages.error(request, "Acces reserve aux administrateurs.")
         return redirect("home")
     return None
+
+
+def _require_auth(request):
+    if not _token(request):
+        return redirect(f"{reverse('login')}?next={request.path}")
+    return None
+
+
+def _api_results(data):
+    if isinstance(data, dict) and "results" in data:
+        return data["results"]
+    if isinstance(data, list):
+        return data
+    return []
+
+
+def _api_count(data):
+    if isinstance(data, dict) and "count" in data:
+        return data["count"]
+    return len(_api_results(data))
+
+
+def _estimated_discount_percent(subtotal: float) -> int:
+    if subtotal >= 1500:
+        return 5
+    if subtotal >= 1000:
+        return 4
+    if subtotal >= 500:
+        return 3
+    if subtotal >= 250:
+        return 2
+    return 0
 
 
 def set_language(request):
@@ -55,29 +90,57 @@ def set_language(request):
 
 
 def home(request):
-    featured_products = []
-    search_query = request.GET.get('q', '').strip()
-    
-    try:
-        data = api_client.api_get("products/", _token(request))
-        if isinstance(data, dict) and "results" in data:
-            featured_products = data["results"][:8]  # Limiter à 8 produits
-        elif isinstance(data, list):
-            featured_products = data[:8]
-    except RequestException:
-        featured_products = []
-    
-    context = {
-        "authenticated": bool(_token(request)),
-        "featured_products": featured_products,
-        "search_query": search_query,
-    }
-    
-   
+    search_query = request.GET.get("q", "").strip()
     if search_query:
         return redirect(f"{reverse('catalog')}?q={search_query}")
-    
-    return render(request, "shop/home.html", context)
+
+    featured_products = []
+    categories = []
+    catalog_stats = {
+        "total_products": 0,
+        "featured_count": 0,
+        "category_count": 0,
+        "low_stock_count": 0,
+        "out_of_stock_count": 0,
+        "expiring_count": 0,
+    }
+
+    try:
+        featured_data = api_client.api_get(
+            "products/",
+            _token(request),
+            params={"featured": "true", "ordering": "-rating"},
+        )
+        featured_products = decorate_products(_api_results(featured_data)[:8])
+        catalog_stats["featured_count"] = _api_count(featured_data)
+    except RequestException:
+        featured_products = []
+
+    try:
+        categories_data = api_client.api_get("categories/", _token(request))
+        categories = _api_results(categories_data)
+        catalog_stats["category_count"] = len(categories)
+        catalog_stats["total_products"] = sum(int(category.get("product_count") or 0) for category in categories)
+    except RequestException:
+        categories = []
+
+    if featured_products:
+        metrics = build_catalog_metrics(featured_products, categories)
+        catalog_stats["low_stock_count"] = metrics["low_stock_count"]
+        catalog_stats["out_of_stock_count"] = metrics["out_of_stock_count"]
+        catalog_stats["expiring_count"] = metrics["expiring_count"]
+
+    return render(
+        request,
+        "shop/home.html",
+        {
+            "authenticated": bool(_token(request)),
+            "featured_products": featured_products,
+            "home_categories": categories[:6],
+            "catalog_stats": catalog_stats,
+            "search_query": search_query,
+        },
+    )
 
 
 def login_view(request):
@@ -92,23 +155,19 @@ def login_view(request):
             messages.error(request, "E-mail ou mot de passe incorrect.")
             return render(request, "shop/login.html")
         except RequestException:
-            messages.error(request, "Impossible de joindre le service d’authentification.")
+            messages.error(request, "Impossible de joindre le service d'authentification.")
             return render(request, "shop/login.html")
         request.session["access"] = data.get("access")
         request.session["refresh"] = data.get("refresh")
-        messages.success(request, "Connexion réussie.")
-       
-        if _is_admin(request):
-            next_url = request.GET.get("next") or reverse("admin_dashboard")
-        else:
-            next_url = request.GET.get("next") or reverse("catalog")
+        messages.success(request, "Connexion reussie.")
+        next_url = request.GET.get("next") or (reverse("admin_dashboard") if _is_admin(request) else reverse("catalog"))
         return redirect(next_url)
     return render(request, "shop/login.html")
 
 
 def logout_view(request):
     request.session.flush()
-    messages.info(request, "Vous êtes déconnecté.")
+    messages.info(request, "Vous etes deconnecte.")
     return redirect("home")
 
 
@@ -120,48 +179,33 @@ def signup_view(request):
         password = request.POST.get("password", "")
         password2 = request.POST.get("password2", "")
         first_name = request.POST.get("full_name", "").strip()
-        
+
         if not email or not password:
             messages.error(request, "Tous les champs sont obligatoires.")
             return render(request, "shop/signup.html")
-        
         if password != password2:
             messages.error(request, "Les mots de passe ne correspondent pas.")
             return render(request, "shop/signup.html")
-        
         if len(password) < 8:
-            messages.error(request, "Le mot de passe doit contenir au moins 8 caractères.")
+            messages.error(request, "Le mot de passe doit contenir au moins 8 caracteres.")
             return render(request, "shop/signup.html")
-        
+
         try:
-            data = api_client.auth_register(
-                email=email,
-                password=password,
-                first_name=first_name,
-                role="PRO",
-            )
-        except HTTPError as e:
+            api_client.auth_register(email=email, password=password, first_name=first_name, role="PRO")
+        except HTTPError as error:
             try:
-                err_detail = e.response.json()
-                msg = str(err_detail)
-            except:
-                msg = "Erreur lors de l'enregistrement."
-            messages.error(request, msg)
+                messages.error(request, str(error.response.json()))
+            except Exception:
+                messages.error(request, "Erreur lors de l'enregistrement.")
             return render(request, "shop/signup.html")
         except RequestException:
             messages.error(request, "Impossible de contacter le service d'authentification.")
             return render(request, "shop/signup.html")
-        
-        messages.success(request, "Inscription réussie! Vous pouvez vous connecter.")
+
+        messages.success(request, "Inscription reussie. Vous pouvez maintenant vous connecter.")
         return redirect("login")
-    
+
     return render(request, "shop/signup.html")
-
-
-def _require_auth(request):
-    if not _token(request):
-        return redirect(f"{reverse('login')}?next={request.path}")
-    return None
 
 
 def catalog(request):
@@ -169,17 +213,29 @@ def catalog(request):
     q = request.GET.get("q", "").strip()
     category = request.GET.get("category", "").strip()
     min_stock = request.GET.get("min_stock", "").strip()
+    min_price = request.GET.get("min_price", "").strip()
+    max_price = request.GET.get("max_price", "").strip()
+    availability = request.GET.get("availability", "").strip()
+    ordering = request.GET.get("ordering", "").strip()
+    featured = request.GET.get("featured", "").strip()
     selected_category_id = None
 
     if q:
         params["search"] = q
+    if min_price:
+        params["min_price"] = min_price
+    if max_price:
+        params["max_price"] = max_price
+    if availability:
+        params["availability"] = availability
+    if ordering:
+        params["ordering"] = ordering
+    if featured:
+        params["featured"] = featured
 
-    # Charge les catégories d'abord pour pouvoir gérer slug et id interchangeables.
     try:
         categories_data = api_client.api_get("categories/", _token(request))
-        categories = categories_data.get("results", categories_data) if isinstance(categories_data, dict) else categories_data
-        if not isinstance(categories, list):
-            categories = []
+        categories = _api_results(categories_data)
     except RequestException:
         categories = []
 
@@ -202,64 +258,44 @@ def catalog(request):
                     break
 
     try:
-        data = api_client.api_get("products/", _token(request), params=params if params else None)
+        data = api_client.api_get("products/", _token(request), params=params or None)
     except RequestException:
         messages.error(request, "Catalogue indisponible.")
         return render(request, "shop/catalog.html", {"results": [], "categories": categories})
 
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]
-    elif isinstance(data, list):
-        results = data
-    else:
-        results = []
-
-    # Filtre stock minimum côté front si donné
+    results = _api_results(data)
     if min_stock:
         try:
-            min_stock_int = int(min_stock)
-            results = [p for p in results if int(p.get("stock", 0)) >= min_stock_int]
+            minimum = int(min_stock)
+            results = [product for product in results if int(product.get("stock", 0)) >= minimum]
         except (TypeError, ValueError):
             pass
 
-    # indicateur de date d'expiration proche (<30 jours)
-    from datetime import datetime, timedelta
+    results = decorate_products(results)
+    catalog_metrics = build_catalog_metrics(results, categories)
 
-    now = datetime.now().date()
-    for product in results:
-        exp_date = product.get("expiration_date")
-        if exp_date:
-            try:
-                exp_date_parsed = datetime.strptime(exp_date, "%Y-%m-%d").date()
-                if exp_date_parsed < now:
-                    product["expired"] = True
-                    product["expiring_soon"] = False
-                elif exp_date_parsed <= now + timedelta(days=30):
-                    product["expired"] = False
-                    product["expiring_soon"] = True
-                else:
-                    product["expired"] = False
-                    product["expiring_soon"] = False
-            except ValueError:
-                product["expired"] = False
-                product["expiring_soon"] = False
-        else:
-            product["expired"] = False
-            product["expiring_soon"] = False
-
-    return render(request, "shop/catalog.html", {
-        "results": results,
-        "categories": categories,
-        "selected_category_id": selected_category_id,
-    })
+    return render(
+        request,
+        "shop/catalog.html",
+        {
+            "results": results,
+            "categories": categories,
+            "selected_category_id": selected_category_id,
+            "catalog_metrics": catalog_metrics,
+            "result_count": _api_count(data),
+            "availability": availability,
+            "ordering": ordering,
+            "featured_only": featured,
+        },
+    )
 
 
 def _get_cart(request) -> dict[str, int]:
     cart = request.session.get("cart") or {}
     out = {}
-    for k, v in cart.items():
+    for key, value in cart.items():
         try:
-            out[str(int(k))] = max(1, int(v))
+            out[str(int(key))] = max(1, int(value))
         except (TypeError, ValueError):
             continue
     request.session["cart"] = out
@@ -272,9 +308,14 @@ def cart_add(request, product_id: int):
         return redir
     cart = _get_cart(request)
     key = str(product_id)
-    cart[key] = cart.get(key, 0) + 1
+    try:
+        product = api_client.api_get(f"products/{product_id}/", _token(request))
+        min_quantity = max(1, int(product.get("min_order_quantity") or 1))
+    except (RequestException, TypeError, ValueError):
+        min_quantity = 1
+    cart[key] = cart.get(key, 0) + min_quantity
     request.session["cart"] = cart
-    messages.success(request, "Produit ajouté au panier.")
+    messages.success(request, "Produit ajoute au panier.")
     return redirect("cart")
 
 
@@ -297,14 +338,16 @@ def cart_update(request, product_id: int):
         quantity = request.POST.get("quantity", "0").strip()
         try:
             qty = int(quantity)
+            product = api_client.api_get(f"products/{product_id}/", _token(request))
+            minimum = max(1, int(product.get("min_order_quantity") or 1))
             if qty > 0:
-                cart[str(product_id)] = qty
-                messages.success(request, "Quantité mise à jour.")
+                cart[str(product_id)] = max(minimum, qty)
+                messages.success(request, "Quantite mise a jour.")
             else:
                 cart.pop(str(product_id), None)
-                messages.info(request, "Produit retiré du panier.")
-        except (ValueError, TypeError):
-            messages.error(request, "Quantité invalide.")
+                messages.info(request, "Produit retire du panier.")
+        except (ValueError, TypeError, RequestException):
+            messages.error(request, "Quantite invalide.")
         request.session["cart"] = cart
     return redirect("cart")
 
@@ -319,17 +362,24 @@ def cart_view(request):
     token = _token(request)
     for pid, qty in cart.items():
         try:
-            p = api_client.api_get(f"products/{pid}/", token)
+            product = decorate_product(api_client.api_get(f"products/{pid}/", token))
         except RequestException:
             continue
-        price = float(p.get("price", 0))
+        price = float(product.get("price", 0))
         line_total = price * qty
         total += line_total
-        lines.append({"product": p, "quantity": qty, "line_total": line_total})
+        lines.append({"product": product, "quantity": qty, "line_total": line_total})
+    discount_percent = _estimated_discount_percent(total)
+    discount_total = round(total * (100 - discount_percent) / 100, 2) if discount_percent else round(total, 2)
     return render(
         request,
         "shop/cart.html",
-        {"lines": lines, "cart_total": total},
+        {
+            "lines": lines,
+            "cart_total": round(total, 2),
+            "discount_percent": discount_percent,
+            "discount_total": discount_total,
+        },
     )
 
 
@@ -341,25 +391,55 @@ def checkout(request):
     if not cart:
         messages.warning(request, "Votre panier est vide.")
         return redirect("cart")
+
+    token = _token(request)
+    cart_items = []
+    cart_total = 0.0
+    for pid, qty in cart.items():
+        try:
+            product = decorate_product(api_client.api_get(f"products/{pid}/", token))
+        except RequestException:
+            continue
+        line_total = float(product.get("price", 0)) * qty
+        cart_total += line_total
+        cart_items.append({"product": product, "quantity": qty, "total_price": round(line_total, 2)})
+
+    discount_percent = _estimated_discount_percent(cart_total)
+    discount_total = round(cart_total * (100 - discount_percent) / 100, 2) if discount_percent else round(cart_total, 2)
+
+    if request.method != "POST":
+        return render(
+            request,
+            "shop/checkout.html",
+            {
+                "cart_items": cart_items,
+                "cart_total": round(cart_total, 2),
+                "discount_percent": discount_percent,
+                "discount_total": discount_total,
+            },
+        )
+
     payload = {
-        "lines": [{"product_id": int(k), "quantity": int(v)} for k, v in cart.items()],
+        "lines": [{"product_id": int(key), "quantity": int(value)} for key, value in cart.items()],
         "phone": request.POST.get("phone", ""),
+        "email": request.POST.get("email", ""),
         "city": request.POST.get("city", ""),
         "commune": request.POST.get("commune", ""),
         "detailed_address": request.POST.get("detailed_address", ""),
         "postal_code": request.POST.get("postal_code", ""),
-        "delivery_method": "domicile"
+        "delivery_method": request.POST.get("delivery_method", "domicile"),
     }
     try:
-        api_client.api_post("orders/", _token(request), payload)
-    except HTTPError as e:
-        messages.error(request, str(e))
-        return redirect("cart")
+        api_client.api_post("orders/", token, payload)
+    except HTTPError as error:
+        messages.error(request, str(error))
+        return redirect("checkout")
     except RequestException:
         messages.error(request, "Impossible de finaliser la commande.")
-        return redirect("cart")
+        return redirect("checkout")
+
     request.session["cart"] = {}
-    messages.success(request, "Commande enregistrée. Une notification a été envoyée via la file RabbitMQ.")
+    messages.success(request, "Commande enregistree. Le circuit logistique a bien ete notifie.")
     return redirect("orders")
 
 
@@ -372,17 +452,19 @@ def orders(request):
     except RequestException:
         messages.error(request, "Historique indisponible.")
         return render(request, "shop/orders.html", {"results": []})
-    results = data.get("results", data) if isinstance(data, dict) else data
-    if not isinstance(results, list):
-        results = []
+    results = _api_results(data)
+    for order in results:
+        status = order.get("status")
+        if status in {"CONFIRMED", "SHIPPED", "DELIVERED"}:
+            order["status_class"] = "badge-ok"
+        elif status == "PENDING":
+            order["status_class"] = "badge-low"
+        else:
+            order["status_class"] = "badge-out"
     return render(request, "shop/orders.html", {"results": results})
 
 
-# ===== ADMIN VIEWS =====
-
-
 def admin_dashboard(request):
-    """Page d'accueil admin"""
     redir = _require_admin(request)
     if redir:
         return redir
@@ -390,47 +472,36 @@ def admin_dashboard(request):
 
 
 def admin_products_list(request):
-    """Lister tous les produits (admin)"""
     redir = _require_admin(request)
     if redir:
         return redir
     try:
         data = api_client.api_get("products/", _token(request))
-        products = data.get("results", data) if isinstance(data, dict) else data
-        if not isinstance(products, list):
-            products = []
+        products = _api_results(data)
     except RequestException:
         messages.error(request, "Impossible de charger les produits.")
         products = []
-    
+
     try:
         categories_data = api_client.api_get("categories/", _token(request))
-        categories = categories_data.get("results", categories_data) if isinstance(categories_data, dict) else categories_data
-        if not isinstance(categories, list):
-            categories = []
+        categories = _api_results(categories_data)
     except RequestException:
         categories = []
-    
-    return render(request, "shop/admin/products_list.html", {
-        "products": products,
-        "categories": categories
-    })
+
+    return render(request, "shop/admin/products_list.html", {"products": products, "categories": categories})
 
 
 def admin_product_create(request):
-    """Créer un nouveau produit"""
     redir = _require_admin(request)
     if redir:
         return redir
-    
+
     try:
         categories_data = api_client.api_get("categories/", _token(request))
-        categories = categories_data.get("results", categories_data) if isinstance(categories_data, dict) else categories_data
-        if not isinstance(categories, list):
-            categories = []
+        categories = _api_results(categories_data)
     except RequestException:
         categories = []
-    
+
     if request.method == "POST":
         payload = {
             "name": request.POST.get("name", "").strip(),
@@ -439,41 +510,37 @@ def admin_product_create(request):
             "price": float(request.POST.get("price", 0)),
             "stock": int(request.POST.get("stock", 0)),
             "sku": request.POST.get("sku", "").strip().upper(),
-            "category": int(request.POST.get("category", 0))
+            "category": int(request.POST.get("category", 0)),
         }
-        
         try:
             api_client.api_post("products/", _token(request), payload)
-            messages.success(request, "Produit créé avec succès.")
+            messages.success(request, "Produit cree avec succes.")
             return redirect("admin_products_list")
-        except HTTPError as e:
-            messages.error(request, f"Erreur: {str(e)}")
+        except HTTPError as error:
+            messages.error(request, f"Erreur: {error}")
         except RequestException:
             messages.error(request, "Erreur de communication avec le serveur.")
-    
+
     return render(request, "shop/admin/product_form.html", {"categories": categories})
 
 
 def admin_product_edit(request, product_id: int):
-    """Modifier un produit existant"""
     redir = _require_admin(request)
     if redir:
         return redir
-    
+
     try:
         product = api_client.api_get(f"products/{product_id}/", _token(request))
     except RequestException:
-        messages.error(request, "Produit non trouvé.")
+        messages.error(request, "Produit non trouve.")
         return redirect("admin_products_list")
-    
+
     try:
         categories_data = api_client.api_get("categories/", _token(request))
-        categories = categories_data.get("results", categories_data) if isinstance(categories_data, dict) else categories_data
-        if not isinstance(categories, list):
-            categories = []
+        categories = _api_results(categories_data)
     except RequestException:
         categories = []
-    
+
     if request.method == "POST":
         payload = {
             "name": request.POST.get("name", product.get("name", "")).strip(),
@@ -482,151 +549,107 @@ def admin_product_edit(request, product_id: int):
             "price": float(request.POST.get("price", product.get("price", 0))),
             "stock": int(request.POST.get("stock", product.get("stock", 0))),
             "sku": request.POST.get("sku", product.get("sku", "")).strip().upper(),
-            "category": int(request.POST.get("category", product.get("category", 0)))
+            "category": int(request.POST.get("category", product.get("category", 0))),
         }
-        
         try:
             api_client.api_patch(f"products/{product_id}/", _token(request), payload)
-            messages.success(request, "Produit mis à jour.")
+            messages.success(request, "Produit mis a jour.")
             return redirect("admin_products_list")
         except HTTPError:
-            messages.error(request, "Erreur lors de la mise à jour.")
+            messages.error(request, "Erreur lors de la mise a jour.")
         except RequestException:
             messages.error(request, "Erreur de communication.")
-    
-    return render(request, "shop/admin/product_form.html", {
-        "product": product,
-        "categories": categories
-    })
+
+    return render(request, "shop/admin/product_form.html", {"product": product, "categories": categories})
 
 
 def admin_product_delete(request, product_id: int):
-    """Supprimer un produit"""
     redir = _require_admin(request)
     if redir:
         return redir
-    
     try:
         api_client.api_delete(f"products/{product_id}/", _token(request))
-        messages.success(request, "Produit supprimé.")
+        messages.success(request, "Produit supprime.")
     except RequestException:
         messages.error(request, "Erreur lors de la suppression.")
-    
     return redirect("admin_products_list")
 
 
 def admin_orders_list(request):
-    """Lister toutes les commandes (admin)"""
     redir = _require_admin(request)
     if redir:
         return redir
-    
     try:
         data = api_client.api_get("orders/", _token(request))
-        orders_list = data.get("results", data) if isinstance(data, dict) else data
-        if not isinstance(orders_list, list):
-            orders_list = []
+        orders_list = _api_results(data)
     except RequestException:
         messages.error(request, "Impossible de charger les commandes.")
         orders_list = []
-    
     return render(request, "shop/admin/orders_list.html", {"orders": orders_list})
 
 
 def admin_order_detail(request, order_id: int):
-    """Voir les détails d'une commande et modifier le statut"""
     redir = _require_admin(request)
     if redir:
         return redir
-    
     try:
         order = api_client.api_get(f"orders/{order_id}/", _token(request))
     except RequestException:
-        messages.error(request, "Commande non trouvée.")
+        messages.error(request, "Commande non trouvee.")
         return redirect("admin_orders_list")
-    
-    # Calculer le total par ligne
+
     if "lines" in order and isinstance(order.get("lines"), list):
         for line in order["lines"]:
             line["line_total"] = float(line.get("unit_price", 0)) * int(line.get("quantity", 1))
-    
+
     if request.method == "POST":
         status = request.POST.get("status", "").strip()
-        if status in ["PENDING", "CONFIRMED", "SHIPPED", "CANCELLED"]:
+        if status in ["PENDING", "CONFIRMED", "SHIPPED", "CANCELLED", "DELIVERED"]:
             try:
                 api_client.api_patch(f"orders/{order_id}/", _token(request), {"status": status})
-                messages.success(request, "Statut mis à jour.")
+                messages.success(request, "Statut mis a jour.")
                 return redirect("admin_order_detail", order_id=order_id)
             except RequestException:
-                messages.error(request, "Erreur lors de la mise à jour du statut.")
-    
+                messages.error(request, "Erreur lors de la mise a jour du statut.")
+
     return render(request, "shop/admin/order_detail.html", {"order": order})
 
 
 def admin_statistics(request):
-    """Statistiques globales pour l'admin"""
     redir = _require_admin(request)
     if redir:
         return redir
-    
     try:
-        # Fetch stats from catalog-api (if implemented) or calculate from available data
         orders_data = api_client.api_get("orders/", _token(request))
-        orders = orders_data.get("results", orders_data) if isinstance(orders_data, dict) else orders_data
-        
+        orders = _api_results(orders_data)
         products_data = api_client.api_get("products/", _token(request))
-        # Handle cases where products_data might be a list or a dict with 'results'
-        if isinstance(products_data, dict):
-            products_count = products_data.get("count", len(products_data.get("results", [])))
-        else:
-            products_count = len(products_data)
-        
-        # Calculate revenue from orders
-        total_revenue = 0
-        if isinstance(orders, list):
-            total_revenue = sum(float(o.get("total", 0)) for o in orders if o.get("status") != "CANCELLED")
-            pending_orders = len([o for o in orders if o.get("status") == "PENDING"])
-        else:
-            orders = []
-            pending_orders = 0
-            
+        products_count = _api_count(products_data)
+        total_revenue = sum(float(order.get("total", 0)) for order in orders if order.get("status") != "CANCELLED")
+        pending_orders = len([order for order in orders if order.get("status") == "PENDING"])
         stats = {
             "total_orders": len(orders),
             "total_revenue": total_revenue,
             "products_count": products_count,
             "pending_orders": pending_orders,
         }
-    except Exception as e:
-        messages.error(request, f"Erreur lors du chargement des statistiques: {str(e)}")
-        stats = {
-            "total_orders": 0,
-            "total_revenue": 0,
-            "products_count": 0,
-            "pending_orders": 0,
-        }
-        
+    except Exception as error:
+        messages.error(request, f"Erreur lors du chargement des statistiques: {error}")
+        stats = {"total_orders": 0, "total_revenue": 0, "products_count": 0, "pending_orders": 0}
     return render(request, "shop/admin/statistics.html", {"stats": stats})
 
 
 def admin_users_list(request):
-    """Liste des utilisateurs (admin)"""
     redir = _require_admin(request)
     if redir:
         return redir
-    
     try:
         data = api_client.auth_get("users/", _token(request))
-        users = data.get("results", data) if isinstance(data, dict) else data
-        if not isinstance(users, list):
-            users = []
-    except Exception as e:
-        messages.error(request, f"Impossible de charger la liste des utilisateurs: {str(e)}")
+        users = _api_results(data)
+    except Exception as error:
+        messages.error(request, f"Impossible de charger la liste des utilisateurs: {error}")
         users = []
-        
     return render(request, "shop/admin/users_list.html", {"users": users})
 
-
-# ===== PROXY INTERACTION VIEWS =====
 
 @csrf_exempt
 def product_like(request, product_id):
@@ -637,8 +660,8 @@ def product_like(request, product_id):
     try:
         data = api_client.api_post(f"products/{product_id}/like/", _token(request))
         return json_response(data)
-    except RequestException as e:
-        return json_response({"error": str(e)}, status=500)
+    except RequestException as error:
+        return json_response({"error": str(error)}, status=500)
 
 
 @csrf_exempt
@@ -650,8 +673,8 @@ def product_recommend(request, product_id):
     try:
         data = api_client.api_post(f"products/{product_id}/recommend/", _token(request))
         return json_response(data)
-    except RequestException as e:
-        return json_response({"error": str(e)}, status=500)
+    except RequestException as error:
+        return json_response({"error": str(error)}, status=500)
 
 
 @csrf_exempt
@@ -663,8 +686,8 @@ def product_rate(request, product_id):
             body = json.loads(request.body)
             data = api_client.api_post(f"products/{product_id}/rate/", _token(request), body)
             return json_response(data)
-        except RequestException as e:
-            return json_response({"error": str(e)}, status=500)
+        except RequestException as error:
+            return json_response({"error": str(error)}, status=500)
     return json_response({"error": "Method not allowed"}, status=405)
 
 
@@ -677,10 +700,9 @@ def product_unrate(request, product_id):
     try:
         data = api_client.api_post(f"products/{product_id}/unrate/", _token(request))
         return json_response(data)
-    except RequestException as e:
-        return json_response({"error": str(e)}, status=500)
+    except RequestException as error:
+        return json_response({"error": str(error)}, status=500)
 
 
 def json_response(data, status=200):
-    from django.http import JsonResponse
     return JsonResponse(data, status=status)

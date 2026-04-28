@@ -1,0 +1,34 @@
+# docker-compose.auth.yml
+# Auth Service - À lancer sur un PC séparé
+# =======================================
+# Variables d'environnement à configurer avant lancement:
+#   - INFRA_IP: Adresse IP du PC infrastructure
+#   - POSTGRES_PASSWORD: Mot de passe PostgreSQL
+
+version: '3.8'
+
+services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      # Connexion à la DB sur le PC infrastructure
+      DATABASE_URL: postgres://auth:${POSTGRES_PASSWORD:-auth_secure}@${INFRA_IP:-192.168.1.100}:5432/auth_db
+      # Connexion à Consul sur le PC infrastructure
+      CONSUL_HTTP_ADDR: http://${INFRA_IP:-192.168.1.100}:8501
+      # Configuration JWT
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-change-me-in-prod}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-auth}
+      SERVICE_NAME: auth-service
+      SERVICE_PORT: "8000"
+      SERVICE_ADDRESS: ${SERVICE_ADDRESS:-127.0.0.1}
+    networks:
+      - pharm-auth
+
+networks:
+  pharm-auth:
+    driver: bridge

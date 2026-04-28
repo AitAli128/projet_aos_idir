@@ -1,0 +1,38 @@
+# docker-compose.web.yml
+# Web UI - À lancer sur un PC séparé
+# ==================================
+# Variables d'environnement à configurer avant lancement:
+#   - INFRA_IP: Adresse IP du PC infrastructure
+#   - SERVICE_ADDRESS: Adresse IP du PC web-ui
+
+version: '3.8'
+
+services:
+  web-ui:
+    build:
+      context: .
+      dockerfile: services/web-ui/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      # URLs des services distants
+      AUTH_INTERNAL_URL: http://${AUTH_FALLBACK_IP:-192.168.1.101}:8000
+      API_INTERNAL_URL: http://${CATALOG_FALLBACK_IP:-192.168.1.102}:8000
+      AUTH_SERVICE_NAME: auth-service
+      API_SERVICE_NAME: catalog-api
+      # URLs publiques (pour les liens dans les emails, etc.)
+      PUBLIC_AUTH_URL: http://${AUTH_FALLBACK_IP:-192.168.1.101}:8000
+      PUBLIC_API_URL: http://${CATALOG_FALLBACK_IP:-192.168.1.102}:8000
+      # Connexion à Consul sur le PC infrastructure
+      CONSUL_HTTP_ADDR: http://${INFRA_IP:-192.168.1.100}:8501
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_WEB:-change-me-web}
+      SERVICE_NAME: web-ui
+      SERVICE_PORT: "8000"
+      SERVICE_ADDRESS: ${SERVICE_ADDRESS:-127.0.0.1}
+    networks:
+      - pharm-web
+
+networks:
+  pharm-web:
+    driver: bridge

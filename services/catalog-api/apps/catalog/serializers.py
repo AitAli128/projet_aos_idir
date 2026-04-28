@@ -1,7 +1,9 @@
 from decimal import Decimal
+from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import F
+from django.utils import timezone
 from rest_framework import serializers
 
 from .discounts import apply_discount
@@ -9,13 +11,16 @@ from .models import Category, Order, OrderLine, Patient, Product, ProductRating,
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    product_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Category
-        fields = ("id", "name", "slug", "description")
+        fields = ("id", "name", "slug", "description", "product_count")
 
 
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
+    category_slug = serializers.CharField(source="category.slug", read_only=True)
     is_liked_by_user = serializers.SerializerMethodField()
     user_likes = serializers.SerializerMethodField()
     average_rating = serializers.SerializerMethodField()
@@ -23,6 +28,8 @@ class ProductSerializer(serializers.ModelSerializer):
     user_rating = serializers.SerializerMethodField()
     is_recommended_by_user = serializers.SerializerMethodField()
     user_recommendations = serializers.SerializerMethodField()
+    stock_state = serializers.SerializerMethodField()
+    is_expiring_soon = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -30,13 +37,22 @@ class ProductSerializer(serializers.ModelSerializer):
             "id",
             "category",
             "category_name",
+            "category_slug",
             "name",
             "slug",
+            "brand",
             "summary",
+            "image_url",
+            "unit_label",
             "price",
             "stock",
+            "low_stock_threshold",
+            "min_order_quantity",
             "sku",
             "expiration_date",
+            "is_featured",
+            "stock_state",
+            "is_expiring_soon",
             "is_liked_by_user",
             "user_likes",
             "average_rating",
@@ -47,24 +63,39 @@ class ProductSerializer(serializers.ModelSerializer):
         )
     
     def get_is_liked_by_user(self, obj):
+        annotated_value = getattr(obj, "liked_by_user", None)
+        if annotated_value is not None:
+            return annotated_value
         request = self.context.get('request')
         if request and hasattr(request, 'user') and request.user.is_authenticated:
             return ProductLike.objects.filter(auth_user_id=request.user.id, product=obj).exists()
         return False
     
     def get_user_likes(self, obj):
+        annotated_value = getattr(obj, "likes_count_value", None)
+        if annotated_value is not None:
+            return annotated_value
         return ProductLike.objects.filter(product=obj).count()
     
     def get_average_rating(self, obj):
+        annotated_value = getattr(obj, "average_rating_value", None)
+        if annotated_value is not None:
+            return round(float(annotated_value), 1)
         ratings = ProductRating.objects.filter(product=obj)
         if ratings.exists():
             return sum(r.rating for r in ratings) / len(ratings)
         return 0
     
     def get_rating_count(self, obj):
+        annotated_value = getattr(obj, "rating_count_value", None)
+        if annotated_value is not None:
+            return annotated_value
         return ProductRating.objects.filter(product=obj).count()
     
     def get_user_rating(self, obj):
+        annotated_value = getattr(obj, "current_user_rating", None)
+        if annotated_value is not None:
+            return annotated_value
         request = self.context.get('request')
         if request and hasattr(request, 'user') and request.user.is_authenticated:
             rating = ProductRating.objects.filter(auth_user_id=request.user.id, product=obj).first()
@@ -72,13 +103,32 @@ class ProductSerializer(serializers.ModelSerializer):
         return None
     
     def get_is_recommended_by_user(self, obj):
+        annotated_value = getattr(obj, "recommended_by_user", None)
+        if annotated_value is not None:
+            return annotated_value
         request = self.context.get('request')
         if request and hasattr(request, 'user') and request.user.is_authenticated:
             return ProductRecommendation.objects.filter(auth_user_id=request.user.id, product=obj).exists()
         return False
     
     def get_user_recommendations(self, obj):
+        annotated_value = getattr(obj, "recommendation_count_value", None)
+        if annotated_value is not None:
+            return annotated_value
         return ProductRecommendation.objects.filter(product=obj).count()
+
+    def get_stock_state(self, obj):
+        if obj.stock <= 0:
+            return "out"
+        if obj.stock <= obj.low_stock_threshold:
+            return "low"
+        return "ok"
+
+    def get_is_expiring_soon(self, obj):
+        if not obj.expiration_date:
+            return False
+        today = timezone.now().date()
+        return today <= obj.expiration_date <= today + timedelta(days=45)
 
 
 class PatientSerializer(serializers.ModelSerializer):

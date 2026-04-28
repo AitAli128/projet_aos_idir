@@ -101,7 +101,7 @@ services:
       - rabbitmq
       - consul
     volumes:
-      - C:\Users\hiche\pharm\services\catalog-api:/app
+      - ./services/catalog-api:/app
     networks:
       - pharm
     labels:

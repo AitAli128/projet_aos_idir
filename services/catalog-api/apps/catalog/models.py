@@ -21,11 +21,17 @@ class Product(models.Model):
     category = models.ForeignKey(Category, related_name="products", on_delete=models.PROTECT)
     name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
+    brand = models.CharField(max_length=120, blank=True)
     summary = models.CharField(max_length=500, blank=True)
+    image_url = models.URLField(max_length=500, blank=True, null=True)
+    unit_label = models.CharField(max_length=80, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
     stock = models.PositiveIntegerField(default=0)
+    low_stock_threshold = models.PositiveIntegerField(default=12)
+    min_order_quantity = models.PositiveIntegerField(default=1)
     sku = models.CharField(max_length=64, unique=True)
     expiration_date = models.DateField(null=True, blank=True)
+    is_featured = models.BooleanField(default=False)
     
     # Compteurs et flags
     rating = models.IntegerField(default=0)

@@ -1,0 +1,35 @@
+# docker-compose.catalog.yml
+# Catalog API - À lancer sur un PC séparé
+# ======================================
+# Variables d'environnement à configurer avant lancement:
+#   - INFRA_IP: Adresse IP du PC infrastructure
+
+version: '3.8'
+
+services:
+  catalog-api:
+    build:
+      context: .
+      dockerfile: services/catalog-api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      # Connexion à la DB sur le PC infrastructure
+      DATABASE_URL: postgres://catalog:${POSTGRES_PASSWORD:-catalog_secure}@${INFRA_IP:-192.168.1.100}:5433/catalog_db
+      # Connexion à RabbitMQ sur le PC infrastructure
+      AMQP_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-rabbitmq_secure}@${INFRA_IP:-192.168.1.100}:5673/
+      # Connexion à Consul sur le PC infrastructure
+      CONSUL_HTTP_ADDR: http://${INFRA_IP:-192.168.1.100}:8501
+      # Configuration JWT
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-change-me-in-prod}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY_CATALOG:-change-me-catalog}
+      SERVICE_NAME: catalog-api
+      SERVICE_PORT: "8000"
+      SERVICE_ADDRESS: ${SERVICE_ADDRESS:-127.0.0.1}
+    networks:
+      - pharm-catalog
+
+networks:
+  pharm-catalog:
+    driver: bridge
